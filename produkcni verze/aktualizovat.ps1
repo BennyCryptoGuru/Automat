@@ -108,9 +108,7 @@ if (-not ([string]::Equals($SourcePath, $TargetPath, [System.StringComparison]::
         "start_hidden.vbs",
         "README.md",
         "NAVOD_WATCHDOG_AUTORUN.txt",
-        ".gitignore",
-        "smazat_profily_nouzovy_rezim.bat",
-        "smazat_vsechny_profily_nouzovy_rezim.bat"
+        ".gitignore"
     )
     foreach ($item in $itemsToCopy) {
         $source = Join-Path $SourcePath $item
