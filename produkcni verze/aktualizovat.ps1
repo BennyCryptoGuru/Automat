@@ -123,16 +123,14 @@ if (-not ([string]::Equals($SourcePath, $TargetPath, [System.StringComparison]::
     }
 }
 
-Write-Step "Cistim stare docasne soubory a nepouzivane profily"
+Write-Step "Cistim stare docasne soubory"
 Remove-DirectoryInside $TargetPath (Join-Path $TargetPath "__pycache__")
 Remove-DirectoryInside $TargetPath (Join-Path $TargetPath ".pytest_cache")
-Get-ChildItem -LiteralPath (Join-Path $TargetPath "data") -Directory -Filter "browser-profile*" -ErrorAction SilentlyContinue |
-    ForEach-Object { Remove-DirectoryInside $TargetPath $_.FullName }
 
 Write-Step "Overuji zavislosti"
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $TargetPath "install.ps1")
 if ($LASTEXITCODE -ne 0) { throw "Instalace nebo aktualizace zavislosti selhala." }
 
 Write-Host "`nAktualizace je hotova." -ForegroundColor Green
-Write-Host "Databaze, screenshoty a prihlasovaci profily v data zustaly zachovane."
+Write-Host "Databaze a screenshoty v data zustaly zachovane."
 Start-AutomatHidden
