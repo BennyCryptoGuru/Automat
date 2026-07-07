@@ -29,25 +29,25 @@ class WorkflowRunner:
 
     @staticmethod
     def _empty_state():
-        return {"status": "idle", "workflow_id": None, "current": None, "countdown": None, "message": "Připraveno", "errors": 0, "skipped": 0, "logs": []}
+        return {"status": "idle", "workflow_id": None, "current": None, "countdown": None, "message": "Ready", "errors": 0, "skipped": 0, "logs": []}
 
     def start(self, workflow_id, repeat_count=1):
         with self.lock:
             if self.thread and self.thread.is_alive():
-                raise RuntimeError("Jiné workflow právě běží")
+                raise RuntimeError("Another workflow is already running")
             try:
                 repeat_count = int(repeat_count)
             except (TypeError, ValueError) as exc:
-                raise ValueError("Počet cyklů musí být celé číslo") from exc
+                raise ValueError("Cycle count must be an integer") from exc
             if repeat_count < 0:
-                raise ValueError("Počet cyklů nesmí být záporný")
+                raise ValueError("Cycle count cannot be negative")
             action_count = self.db.one("SELECT COUNT(*) AS value FROM actions WHERE workflow_id=? AND enabled=1", (workflow_id,))
             if not action_count or not action_count["value"]:
-                raise ValueError("Workflow neobsahuje žádné aktivní akce")
+                raise ValueError("Workflow does not contain any active actions")
             self.repeat_count = repeat_count
             self.pause_event.set()
             self.stop_event.clear()
-            self.state = {"status": "running", "workflow_id": workflow_id, "current": None, "countdown": None, "cycle": 0, "repeat_count": repeat_count, "message": "Spouštím", "errors": 0, "skipped": 0, "logs": []}
+            self.state = {"status": "running", "workflow_id": workflow_id, "current": None, "countdown": None, "cycle": 0, "repeat_count": repeat_count, "message": "Starting", "errors": 0, "skipped": 0, "logs": []}
             self.thread = threading.Thread(target=self._run, args=(workflow_id,), daemon=True)
             self.thread.start()
             return self.snapshot()
@@ -56,36 +56,36 @@ class WorkflowRunner:
         if self.state["status"] == "running":
             self.pause_event.clear()
             self.state["status"] = "paused"
-            self.state["message"] = "Pozastaveno"
+            self.state["message"] = "Paused"
         return self.snapshot()
 
     def resume(self):
         if self.state["status"] == "paused":
             self.state["status"] = "running"
-            self.state["message"] = "Pokračuji"
+            self.state["message"] = "Resuming"
             self.pause_event.set()
         return self.snapshot()
 
     def stop(self):
         self.stop_event.set()
         self.pause_event.set()
-        self.state["message"] = "Zastavuji"
+        self.state["message"] = "Stopping"
         return self.snapshot()
 
     def login(self, credential_id):
         with self.lock:
             if self.thread and self.thread.is_alive():
-                raise RuntimeError("Přímé přihlášení nelze spustit během běžícího workflow")
+                raise RuntimeError("Direct login cannot start while a workflow is running")
         profile = self.db.one(
             "SELECT c.id, s.url AS site_url FROM credentials c LEFT JOIN sites s ON s.id=c.site_id WHERE c.id=?",
             (credential_id,),
         )
         if not profile:
-            raise ValueError("Přihlašovací profil neexistuje")
+            raise ValueError("Login profile does not exist")
         if profile.get("site_url"):
             self.browser.navigate(profile["site_url"])
         elif not self.browser.status()["running"]:
-            raise ValueError("Profil nemá přiřazenou stránku. Nejdříve otevřete cílový web.")
+            raise ValueError("The profile has no assigned site. Open the target website first.")
         self._auto_login(credential_id)
         return {"credential_id": credential_id, "browser": self.browser.status()}
 
@@ -135,8 +135,8 @@ class WorkflowRunner:
     def _run(self, workflow_id):
         try:
             actions = self.db.all("SELECT * FROM actions WHERE workflow_id=? AND enabled=1 ORDER BY position, id", (workflow_id,))
-            mode = "nekonečná smyčka" if self.repeat_count == 0 else f"{self.repeat_count} cyklů"
-            self._log("info", f"Workflow spuštěno: {len(actions)} akcí, {mode}")
+            mode = "infinite loop" if self.repeat_count == 0 else f"{self.repeat_count} cycles"
+            self._log("info", f"Workflow started: {len(actions)} actions, {mode}")
             cycle = 0
             while self.repeat_count == 0 or cycle < self.repeat_count:
                 self._checkpoint()
@@ -144,7 +144,7 @@ class WorkflowRunner:
                 cycle_had_error = False
                 with self.lock:
                     self.state["cycle"] = cycle
-                self._log("info", f"Cyklus {cycle} spuštěn")
+                self._log("info", f"Cycle {cycle} started")
                 for index, action in enumerate(actions):
                     self._checkpoint()
                     with self.lock:
@@ -158,12 +158,12 @@ class WorkflowRunner:
                                 self._execute(action)
                     except (NoSuchElementException, TimeoutException) as exc:
                         cycle_had_error = True
-                        detail = str(exc).splitlines()[0] or "element nebyl nalezen"
+                        detail = str(exc).splitlines()[0] or "element was not found"
                         with self.lock:
                             self.state["skipped"] += 1
                         self._log(
                             "warning",
-                            f"Akce {index + 1} přeskočena: {detail}",
+                            f"Action {index + 1} skipped: {detail}",
                             action["id"],
                         )
                         continue
@@ -178,26 +178,26 @@ class WorkflowRunner:
                             self.state["errors"] += 1
                         self._log(
                             "error",
-                            f"Akce {index + 1} selhala, nekonečný Loop pokračuje: {type(exc).__name__}: {detail}",
+                            f"Action {index + 1} failed, infinite loop continues: {type(exc).__name__}: {detail}",
                             action["id"],
                         )
                         self._sleep(0.5)
                         continue
                 if cycle_had_error:
-                    self._log("warning", f"Cyklus {cycle} dokončen s přeskočenými nebo chybnými akcemi")
+                    self._log("warning", f"Cycle {cycle} completed with skipped or failed actions")
                 else:
-                    self._log("success", f"Cyklus {cycle} dokončen")
+                    self._log("success", f"Cycle {cycle} completed")
                 if self.repeat_count == 0:
                     self._sleep(0.1)
             with self.lock:
                 self.state["status"] = "completed"
                 self.state["current"] = None
-            self._log("success", "Workflow dokončeno")
+            self._log("success", "Workflow completed")
         except InterruptedError:
             with self.lock:
                 self.state["status"] = "stopped"
                 self.state["current"] = None
-            self._log("warning", "Workflow zastaveno")
+            self._log("warning", "Workflow stopped")
         except Exception as exc:
             with self.lock:
                 self.state["status"] = "failed"
@@ -206,10 +206,10 @@ class WorkflowRunner:
 
     def _element(self, action):
         if not action.get("element_id"):
-            raise ValueError("Akce vyžaduje element")
+            raise ValueError("Action requires an element")
         item = self.db.one("SELECT * FROM elements WHERE id=?", (action["element_id"],))
         if not item:
-            raise ValueError("Uložený element neexistuje")
+            raise ValueError("Saved element does not exist")
         driver = self.browser.require()
         driver.switch_to.default_content()
         for frame in item.get("frame_path", []):
@@ -243,17 +243,17 @@ class WorkflowRunner:
             elif operation == "key":
                 element.send_keys(KEYS.get(str(value or "ENTER").lower(), value or Keys.ENTER))
             else:
-                raise ValueError(f"Nepodporovaná opakovaná akce: {operation}")
+                raise ValueError(f"Unsupported repeated action: {operation}")
 
     def _repeat_click(self, action):
         p = action["parameters"]
         frequency = float(p.get("clicks_per_second", 1))
         if frequency <= 0:
-            raise ValueError("Frekvence klikání musí být větší než nula")
+            raise ValueError("Click frequency must be greater than zero")
         interval = 1.0 / frequency
         duration = float(p.get("duration_seconds", 0))
         if duration < 0:
-            raise ValueError("Doba klikání nesmí být záporná")
+            raise ValueError("Click duration cannot be negative")
         started = time.monotonic()
         clicks = 0
         while duration == 0 or time.monotonic() - started < duration:
@@ -261,9 +261,9 @@ class WorkflowRunner:
             self._perform_operation(action["element_id"], "click")
             clicks += 1
             if clicks == 1 or clicks % 25 == 0:
-                self._log("info", f"Kontinuální klikání: {clicks} kliknutí", action["id"])
+                self._log("info", f"Continuous clicking: {clicks} clicks", action["id"])
             self._sleep(interval)
-        self._log("success", f"Kontinuální klikání dokončeno: {clicks} kliknutí", action["id"])
+        self._log("success", f"Continuous clicking completed: {clicks} clicks", action["id"])
 
     def _repeat_until(self, action):
         p = action["parameters"]
@@ -281,10 +281,10 @@ class WorkflowRunner:
                 if target_id == source_id:
                     self._perform_operation(source_id, operation, value)
                     repetitions += 1
-                self._log("success", f"Cílový objekt se objevil; opakování: {repetitions}", action["id"])
+                self._log("success", f"Target object appeared; repetitions: {repetitions}", action["id"])
                 return
             if timeout and time.monotonic() - started >= timeout:
-                raise TimeoutError("Cílový objekt se ve stanoveném čase neobjevil")
+                raise TimeoutError("Target object did not appear within the timeout")
             if target_id != source_id:
                 self._perform_operation(source_id, operation, value)
                 repetitions += 1
@@ -293,12 +293,12 @@ class WorkflowRunner:
     def _auto_login(self, credential_id):
         profile = self.db.one("SELECT * FROM credentials WHERE id=?", (credential_id,))
         if not profile:
-            raise ValueError("Přihlašovací profil neexistuje")
+            raise ValueError("Login profile does not exist")
         username = self.vault.decrypt(profile["username_cipher"])
         password = self.vault.decrypt(profile["password_cipher"])
         with self.browser.lock:
-            self._fill_login_field(profile["username_element_id"], username, "uživatelského jména")
-            self._fill_login_field(profile["password_element_id"], password, "hesla")
+            self._fill_login_field(profile["username_element_id"], username, "username")
+            self._fill_login_field(profile["password_element_id"], password, "password")
             for action in profile.get("extra_actions", []):
                 self._perform_login_action(action)
             if profile.get("submit_element_id"):
@@ -315,7 +315,7 @@ class WorkflowRunner:
             return
         element_id = action.get("element_id")
         if not element_id:
-            raise ValueError("Dodatecna prihlasovaci akce vyzaduje objekt")
+            raise ValueError("Extra login action requires an object")
         self._login_delay()
         if kind == "focus":
             element = self._element_by_id(element_id)
@@ -324,7 +324,7 @@ class WorkflowRunner:
         elif kind in {"click", "double_click", "hover", "type", "key"}:
             self._perform_operation(element_id, kind, action.get("value", ""))
         else:
-            raise ValueError(f"Nepodporovana dodatecna prihlasovaci akce: {kind}")
+            raise ValueError(f"Unsupported extra login action: {kind}")
 
     @staticmethod
     def _editable_from(root, driver=None):
@@ -373,7 +373,7 @@ class WorkflowRunner:
             return WebDriverWait(driver, timeout, poll_frequency=0.2).until(locate)
         except Exception as exc:
             raise ValueError(
-                f"Objekt pro {label} není editovatelné pole. Uložte přímo INPUT/TEXTAREA, ne jeho obal."
+                f"Object for {label} is not an editable field. Save the INPUT/TEXTAREA directly, not its wrapper."
             ) from exc
 
     def _fill_login_field(self, element_id, value, label):
@@ -390,7 +390,7 @@ class WorkflowRunner:
                 element.send_keys(Keys.BACKSPACE)
             element.send_keys(value)
         except WebDriverException as exc:
-            raise ValueError(f"Pole {label} bylo nalezeno, ale nelze do něj psát. Zkontrolujte uložený objekt.") from exc
+            raise ValueError(f"Field {label} was found, but cannot be typed into. Check the saved object.") from exc
 
     def _login_delay(self, seconds=1.0):
         seconds = max(1.0, float(seconds))
@@ -418,7 +418,7 @@ class WorkflowRunner:
         right = min(float(rect["viewportWidth"]), float(rect["x"]) + float(rect["width"]))
         bottom = min(float(rect["viewportHeight"]), float(rect["y"]) + float(rect["height"]))
         if right <= left or bottom <= top:
-            raise ValueError("Objekt není ve viditelné části stránky")
+            raise ValueError("Object is not in the visible part of the page")
         return (left + right) / 2, (top + bottom) / 2
 
     def _hover_element(self, element):
@@ -448,7 +448,7 @@ class WorkflowRunner:
                         element, x, y,
                     )
             except WebDriverException as exc:
-                raise ValueError("Na objekt nelze přejet myší ani po jeho posunutí do viditelné oblasti") from exc
+                raise ValueError("Cannot hover the object even after scrolling it into the visible area") from exc
 
     def _click_login_button(self, element_id, timeout=12):
         driver = self.browser.require()
@@ -471,7 +471,7 @@ class WorkflowRunner:
             self._login_delay()
             button.click()
         except Exception as exc:
-            raise ValueError("Přihlašovací tlačítko nebylo kliknutelné. Zkontrolujte uložený objekt tlačítka.") from exc
+            raise ValueError("The login button was not clickable. Check the saved button object.") from exc
 
     def _execute(self, action):
         p = action["parameters"]
@@ -514,7 +514,7 @@ class WorkflowRunner:
         elif kind == "scroll_by": driver.execute_script("window.scrollBy(arguments[0],arguments[1])", int(p.get("x", 0)), int(p.get("y", 400)))
         elif kind == "drag_to":
             target = self.db.one("SELECT * FROM elements WHERE id=?", (p.get("target_element_id"),))
-            if not target: raise ValueError("Cílový element neexistuje")
+            if not target: raise ValueError("Target element does not exist")
             target_el = self.browser.find(target["strategy"], target["locator"], target.get("alternatives"))
             ActionChains(driver).drag_and_drop(element, target_el).perform()
         elif kind == "mouse_move": ActionChains(driver).move_by_offset(int(p.get("x", 0)), int(p.get("y", 0))).perform()
@@ -542,4 +542,4 @@ class WorkflowRunner:
         elif kind == "screenshot": element.screenshot(str(self.browser.screenshot_dir / p.get("filename", f"action-{action['id']}.png")))
         elif kind == "script": driver.execute_script(p.get("script", ""))
         elif kind == "cookie_set": driver.add_cookie({"name": p.get("name", ""), "value": p.get("value", "")})
-        else: raise ValueError(f"Neznámý typ akce: {kind}")
+        else: raise ValueError(f"Unknown action type: {kind}")

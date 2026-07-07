@@ -65,20 +65,20 @@ def create_app(test_config=None):
     def normalize_credential_actions(raw_actions):
         raw_actions = raw_actions or []
         if not isinstance(raw_actions, list) or len(raw_actions) > 100:
-            raise ValueError("Dodatecne prihlasovaci akce maji neplatnou strukturu")
+            raise ValueError("Extra login actions have an invalid structure")
         actions = []
         for index, item in enumerate(raw_actions, 1):
             if not isinstance(item, dict):
-                raise ValueError(f"Dodatecna prihlasovaci akce {index} je neplatna")
+                raise ValueError(f"Extra login action {index} is invalid")
             action_type = item.get("action_type") or "click"
             if action_type not in CREDENTIAL_ACTION_TYPES:
-                raise ValueError(f"Nepodporovana dodatecna prihlasovaci akce: {action_type}")
+                raise ValueError(f"Unsupported extra login action: {action_type}")
             action = {"action_type": action_type}
             if action_type == "wait":
                 action["seconds"] = max(0, float(item.get("seconds") or 1))
             else:
                 if not item.get("element_id"):
-                    raise ValueError(f"Dodatecna prihlasovaci akce {index} vyzaduje objekt")
+                    raise ValueError(f"Extra login action {index} requires an object")
                 action["element_id"] = int(item["element_id"])
                 if action_type in {"type", "key"}:
                     action["value"] = str(item.get("value") or "")
@@ -156,9 +156,9 @@ def create_app(test_config=None):
     def create_element():
         p = payload()
         if p.get("strategy") not in BY_MAP:
-            raise ValueError("Neplatná lokalizační strategie")
+            raise ValueError("Invalid locator strategy")
         if not p.get("name") or not p.get("locator"):
-            raise ValueError("Název a lokátor jsou povinné")
+            raise ValueError("Name and locator are required")
         element_id = db.execute(
             "INSERT INTO elements(site_id,name,strategy,locator,alternatives,frame_path,parent_id,metadata) VALUES(?,?,?,?,?,?,?,?)",
             (p.get("site_id"), p["name"].strip(), p["strategy"], p["locator"], json.dumps(p.get("alternatives", [])), json.dumps(p.get("frame_path", [])), p.get("parent_id"), json.dumps(p.get("metadata", {}))),
@@ -200,30 +200,30 @@ def create_app(test_config=None):
     def import_elements():
         archive = payload()
         if archive.get("format") != "automat-elements" or archive.get("version") != 1:
-            raise ValueError("Soubor není podporovaná záloha objektů Automatu")
+            raise ValueError("The file is not a supported Automat object backup")
         sites = archive.get("sites", [])
         elements = archive.get("elements", [])
         if not isinstance(sites, list) or not isinstance(elements, list) or len(sites) > 10000 or len(elements) > 10000:
-            raise ValueError("Záloha objektů má neplatnou nebo příliš velkou strukturu")
+            raise ValueError("The object backup has an invalid or too large structure")
         site_ref_values = [item.get("ref") for item in sites]
         element_ref_values = [item.get("ref") for item in elements]
         if any(not ref for ref in site_ref_values) or len(set(site_ref_values)) != len(site_ref_values):
-            raise ValueError("Záloha objektů obsahuje neplatné reference stránek")
+            raise ValueError("The object backup contains invalid site references")
         if any(not ref for ref in element_ref_values) or len(set(element_ref_values)) != len(element_ref_values):
-            raise ValueError("Záloha objektů obsahuje duplicitní reference")
+            raise ValueError("The object backup contains duplicate references")
         known_sites = set(site_ref_values)
         known_elements = set(element_ref_values)
         if any(item.get("site_ref") and item["site_ref"] not in known_sites for item in elements):
-            raise ValueError("Záloha odkazuje na neexistující stránku")
+            raise ValueError("The backup references a missing site")
         if any(item.get("parent_ref") and item["parent_ref"] not in known_elements for item in elements):
-            raise ValueError("Záloha odkazuje na neexistující nadřazený objekt")
+            raise ValueError("The backup references a missing parent object")
         created_count = 0
         reused_count = 0
         with db.connect() as connection:
             site_refs = {}
             for item in sites:
                 if not item.get("ref") or not str(item.get("url", "")).strip():
-                    raise ValueError("Záloha obsahuje neplatnou stránku")
+                    raise ValueError("The backup contains an invalid site")
                 row = connection.execute("SELECT id FROM sites WHERE url=?", (item["url"],)).fetchone()
                 site_refs[item["ref"]] = row["id"] if row else connection.execute(
                     "INSERT INTO sites(name,url) VALUES(?,?)", (item.get("name") or item["url"], item["url"]),
@@ -232,7 +232,7 @@ def create_app(test_config=None):
             created_refs = set()
             for item in elements:
                 if not item.get("ref") or item.get("strategy") not in BY_MAP or not str(item.get("locator", "")).strip():
-                    raise ValueError("Záloha obsahuje neplatný objekt")
+                    raise ValueError("The backup contains an invalid object")
                 site_id = site_refs.get(item.get("site_ref"))
                 row = connection.execute(
                     "SELECT id FROM elements WHERE site_id IS ? AND strategy=? AND locator=?",
@@ -244,7 +244,7 @@ def create_app(test_config=None):
                 else:
                     element_id = connection.execute(
                         "INSERT INTO elements(site_id,name,strategy,locator,alternatives,frame_path,metadata) VALUES(?,?,?,?,?,?,?)",
-                        (site_id, item.get("name") or "Importovaný objekt", item["strategy"], item["locator"],
+                        (site_id, item.get("name") or "Imported object", item["strategy"], item["locator"],
                          json.dumps(item.get("alternatives", [])), json.dumps(item.get("frame_path", [])),
                          json.dumps(item.get("metadata", {}))),
                     ).lastrowid
@@ -255,7 +255,7 @@ def create_app(test_config=None):
                 if item.get("parent_ref") and item["ref"] in created_refs:
                     parent_id = element_refs.get(item["parent_ref"])
                     if not parent_id:
-                        raise ValueError("Záloha odkazuje na neexistující nadřazený objekt")
+                        raise ValueError("The backup references a missing parent object")
                     connection.execute("UPDATE elements SET parent_id=? WHERE id=?", (parent_id, element_refs[item["ref"]]))
         return ok({"created": created_count, "reused": reused_count, "total": len(elements)}, 201)
 
@@ -263,9 +263,9 @@ def create_app(test_config=None):
     def update_element(item_id):
         p = payload()
         if p.get("strategy") not in BY_MAP:
-            raise ValueError("Neplatná lokalizační strategie")
+            raise ValueError("Invalid locator strategy")
         if not str(p.get("name", "")).strip() or not str(p.get("locator", "")).strip():
-            raise ValueError("Název a lokátor jsou povinné")
+            raise ValueError("Name and locator are required")
         db.execute("UPDATE elements SET site_id=?,name=?,strategy=?,locator=?,parent_id=? WHERE id=?", (p.get("site_id"), p["name"], p["strategy"], p["locator"], p.get("parent_id"), item_id))
         return ok(db.one("SELECT * FROM elements WHERE id=?", (item_id,)))
 
@@ -282,7 +282,7 @@ def create_app(test_config=None):
     def create_site():
         p = payload()
         if not p.get("name") or not p.get("url"):
-            raise ValueError("Název a URL jsou povinné")
+            raise ValueError("Name and URL are required")
         item_id = db.execute("INSERT INTO sites(name,url) VALUES(?,?)", (p["name"].strip(), p["url"].strip()))
         return ok(db.one("SELECT * FROM sites WHERE id=?", (item_id,)), 201)
 
@@ -296,7 +296,7 @@ def create_app(test_config=None):
         p = payload()
         required = ("name", "username", "password", "username_element_id", "password_element_id")
         if any(p.get(key) in (None, "") for key in required):
-            raise ValueError("Vyplňte název, hodnoty a oba přihlašovací objekty")
+            raise ValueError("Fill in the name, values, and both login objects")
         extra_actions = normalize_credential_actions(p.get("extra_actions", []))
         item_id = db.execute(
             "INSERT INTO credentials(site_id,name,username_element_id,password_element_id,submit_element_id,extra_actions,username_cipher,password_cipher) VALUES(?,?,?,?,?,?,?,?)",
@@ -309,10 +309,10 @@ def create_app(test_config=None):
     def update_credential(item_id):
         p = payload()
         if not db.one("SELECT id FROM credentials WHERE id=?", (item_id,)):
-            raise ValueError("Přihlašovací profil neexistuje")
+            raise ValueError("Login profile does not exist")
         required = ("name", "username_element_id", "password_element_id")
         if any(p.get(key) in (None, "") for key in required):
-            raise ValueError("Vyplňte název a oba přihlašovací objekty")
+            raise ValueError("Fill in the name and both login objects")
         extra_actions = normalize_credential_actions(p.get("extra_actions", []))
         values = [
             p.get("site_id"), p["name"].strip(), p["username_element_id"],
@@ -376,7 +376,7 @@ def create_app(test_config=None):
         archive = {
             "format": "automat-credentials", "version": 1,
             "exported_at": datetime.now(timezone.utc).isoformat(),
-            "warning": "Soubor obsahuje prihlasovaci jmena a hesla v citelne podobe. Uchovejte ho bezpecne.",
+            "warning": "Soubor obsahuje prihlasovaci jmena a password v citelne podobe. Uchovejte ho bezpecne.",
             "sites": [{"ref": site_refs[site["id"]], "name": site["name"], "url": site["url"]} for site in sites],
             "elements": [{
                 "ref": element_refs[item["id"]], "site_ref": site_refs.get(item.get("site_id")),
@@ -405,7 +405,7 @@ def create_app(test_config=None):
     def import_credentials():
         archive = payload()
         if archive.get("format") != "automat-credentials" or archive.get("version") != 1:
-            raise ValueError("Soubor neni podporovana zaloha prihlasovacich profilu Automatu")
+            raise ValueError("This file is not a supported Automat login profile backup")
         sites = archive.get("sites", [])
         elements = archive.get("elements", [])
         credentials = archive.get("credentials", [])
@@ -413,34 +413,34 @@ def create_app(test_config=None):
             not isinstance(sites, list) or not isinstance(elements, list) or not isinstance(credentials, list)
             or len(sites) > 10000 or len(elements) > 10000 or len(credentials) > 10000
         ):
-            raise ValueError("Zaloha prihlasovacich profilu ma neplatnou nebo prilis velkou strukturu")
+            raise ValueError("The login profile backup has an invalid or too large structure")
         site_ref_values = [item.get("ref") for item in sites]
         element_ref_values = [item.get("ref") for item in elements]
         if any(not ref for ref in site_ref_values) or len(set(site_ref_values)) != len(site_ref_values):
-            raise ValueError("Zaloha obsahuje neplatne reference stranek")
+            raise ValueError("The backup contains invalid site references")
         if any(not ref for ref in element_ref_values) or len(set(element_ref_values)) != len(element_ref_values):
-            raise ValueError("Zaloha obsahuje neplatne reference objektu")
+            raise ValueError("The backup contains invalid object references")
         known_sites = set(site_ref_values)
         known_elements = set(element_ref_values)
         if any(item.get("site_ref") and item["site_ref"] not in known_sites for item in elements):
-            raise ValueError("Zaloha odkazuje na neexistujici stranku")
+            raise ValueError("The backup references a missing site")
         if any(item.get("parent_ref") and item["parent_ref"] not in known_elements for item in elements):
-            raise ValueError("Zaloha odkazuje na neexistujici nadrazeny objekt")
+            raise ValueError("The backup references a missing parent object")
         for item in credentials:
             refs = [item.get("username_element_ref"), item.get("password_element_ref")]
             if item.get("submit_element_ref"):
                 refs.append(item.get("submit_element_ref"))
             for action in item.get("extra_actions", []) or []:
                 if not isinstance(action, dict) or action.get("action_type") not in CREDENTIAL_ACTION_TYPES:
-                    raise ValueError("Zaloha obsahuje neplatnou dodatecnou prihlasovaci akci")
+                    raise ValueError("The backup contains an invalid extra login action")
                 if action.get("action_type") != "wait":
                     refs.append(action.get("element_ref"))
             if item.get("site_ref") and item["site_ref"] not in known_sites:
-                raise ValueError("Zaloha profilu odkazuje na neexistujici stranku")
+                raise ValueError("The profile backup references a missing site")
             if any(not ref or ref not in known_elements for ref in refs):
-                raise ValueError("Zaloha profilu odkazuje na neexistujici objekt")
+                raise ValueError("The profile backup references a missing object")
             if not str(item.get("name", "")).strip() or item.get("username") is None or item.get("password") is None:
-                raise ValueError("Zaloha obsahuje neplatny prihlasovaci profil")
+                raise ValueError("The backup contains an invalid login profile")
         created_count = 0
         updated_count = 0
         reused_elements = 0
@@ -449,7 +449,7 @@ def create_app(test_config=None):
             site_refs = {}
             for item in sites:
                 if not str(item.get("url", "")).strip():
-                    raise ValueError("Zaloha obsahuje neplatnou stranku")
+                    raise ValueError("The backup contains an invalid site")
                 row = connection.execute("SELECT id FROM sites WHERE url=?", (item["url"],)).fetchone()
                 site_refs[item["ref"]] = row["id"] if row else connection.execute(
                     "INSERT INTO sites(name,url) VALUES(?,?)", (item.get("name") or item["url"], item["url"]),
@@ -458,7 +458,7 @@ def create_app(test_config=None):
             created_refs = set()
             for item in elements:
                 if item.get("strategy") not in BY_MAP or not str(item.get("locator", "")).strip():
-                    raise ValueError("Zaloha obsahuje neplatny objekt")
+                    raise ValueError("The backup contains an invalid object")
                 site_id = site_refs.get(item.get("site_ref"))
                 row = connection.execute(
                     "SELECT id FROM elements WHERE site_id IS ? AND strategy=? AND locator=?",
@@ -470,7 +470,7 @@ def create_app(test_config=None):
                 else:
                     element_id = connection.execute(
                         "INSERT INTO elements(site_id,name,strategy,locator,alternatives,frame_path,metadata) VALUES(?,?,?,?,?,?,?)",
-                        (site_id, item.get("name") or "Importovany objekt", item["strategy"], item["locator"],
+                        (site_id, item.get("name") or "Imported object", item["strategy"], item["locator"],
                          json.dumps(item.get("alternatives", [])), json.dumps(item.get("frame_path", [])),
                          json.dumps(item.get("metadata", {}))),
                     ).lastrowid
@@ -524,7 +524,7 @@ def create_app(test_config=None):
     def create_workflow():
         p = payload()
         if not p.get("name"):
-            raise ValueError("Název workflow je povinný")
+            raise ValueError("Workflow name is required")
         item_id = db.execute("INSERT INTO workflows(site_id,name,description) VALUES(?,?,?)", (p.get("site_id"), p["name"].strip(), p.get("description", "")))
         return ok(db.one("SELECT * FROM workflows WHERE id=?", (item_id,)), 201)
 
@@ -532,7 +532,7 @@ def create_app(test_config=None):
     def get_workflow(item_id):
         workflow = db.one("SELECT * FROM workflows WHERE id=?", (item_id,))
         if not workflow:
-            raise ValueError("Workflow neexistuje")
+            raise ValueError("Workflow does not exist")
         workflow["actions"] = db.all("SELECT * FROM actions WHERE workflow_id=? ORDER BY position,id", (item_id,))
         return ok(workflow)
 
@@ -540,7 +540,7 @@ def create_app(test_config=None):
     def export_workflow(item_id):
         workflow = db.one("SELECT * FROM workflows WHERE id=?", (item_id,))
         if not workflow:
-            raise ValueError("Workflow neexistuje")
+            raise ValueError("Workflow does not exist")
         actions = db.all("SELECT * FROM actions WHERE workflow_id=? ORDER BY position,id", (item_id,))
         site = db.one("SELECT name,url FROM sites WHERE id=?", (workflow.get("site_id"),)) if workflow.get("site_id") else None
         element_ids = set()
@@ -596,14 +596,14 @@ def create_app(test_config=None):
     def import_workflow():
         archive = payload()
         if archive.get("format") != "automat-workflow" or archive.get("version") != 1:
-            raise ValueError("Soubor není podporovaná záloha Automatu")
+            raise ValueError("The file is not a supported Automat backup")
         elements = archive.get("elements", [])
         actions = archive.get("actions", [])
         if not isinstance(elements, list) or not isinstance(actions, list) or len(elements) > 10000 or len(actions) > 10000:
-            raise ValueError("Záloha má neplatnou nebo příliš velkou strukturu")
+            raise ValueError("The backup has an invalid or too large structure")
         workflow_data = archive.get("workflow") or {}
         if not str(workflow_data.get("name", "")).strip():
-            raise ValueError("Záloha neobsahuje název workflow")
+            raise ValueError("The backup does not contain a workflow name")
         warnings = []
         with db.connect() as connection:
             site_id = None
@@ -619,14 +619,14 @@ def create_app(test_config=None):
             created = {}
             for item in elements:
                 if item.get("strategy") not in BY_MAP or not item.get("ref") or not item.get("locator"):
-                    raise ValueError("Záloha obsahuje neplatný objekt")
+                    raise ValueError("The backup contains an invalid object")
                 row = connection.execute("SELECT id FROM elements WHERE site_id IS ? AND strategy=? AND locator=?", (site_id, item["strategy"], item["locator"])).fetchone()
                 if row:
                     element_id = row["id"]
                 else:
                     element_id = connection.execute(
                         "INSERT INTO elements(site_id,name,strategy,locator,alternatives,frame_path,metadata) VALUES(?,?,?,?,?,?,?)",
-                        (site_id, item.get("name") or "Importovaný objekt", item["strategy"], item["locator"], json.dumps(item.get("alternatives", [])), json.dumps(item.get("frame_path", [])), json.dumps(item.get("metadata", {}))),
+                        (site_id, item.get("name") or "Imported object", item["strategy"], item["locator"], json.dumps(item.get("alternatives", [])), json.dumps(item.get("frame_path", [])), json.dumps(item.get("metadata", {}))),
                     ).lastrowid
                     created[item["ref"]] = element_id
                 refs[item["ref"]] = element_id
@@ -635,7 +635,7 @@ def create_app(test_config=None):
                     connection.execute("UPDATE elements SET parent_id=? WHERE id=?", (refs.get(item["parent_ref"]), created[item["ref"]]))
             for position, action in enumerate(actions, 1):
                 if action.get("action_type") not in ACTION_TYPES:
-                    warnings.append(f"Neznámá akce {action.get('action_type')} byla vynechána")
+                    warnings.append(f"Unknown action {action.get('action_type')} was skipped")
                     continue
                 parameters = dict(action.get("parameters") or {})
                 for key in list(parameters):
@@ -649,11 +649,11 @@ def create_app(test_config=None):
                         parameters["credential_id"] = row["id"]
                     else:
                         enabled = False
-                        warnings.append(f"Akce automatického přihlášení byla vypnuta: chybí profil „{credential_ref}“")
+                        warnings.append(f"Auto-login action was disabled: missing profile „{credential_ref}“")
                 element_id = refs.get(action.get("element_ref"))
                 if action.get("element_ref") and not element_id:
                     enabled = False
-                    warnings.append(f"Akce {position} byla vypnuta: chybí její objekt")
+                    warnings.append(f"Action {position} was disabled: its object is missing")
                 connection.execute(
                     "INSERT INTO actions(workflow_id,position,action_type,element_id,parameters,enabled) VALUES(?,?,?,?,?,?)",
                     (workflow_id, position, action["action_type"], element_id, json.dumps(parameters), int(enabled)),
@@ -669,7 +669,7 @@ def create_app(test_config=None):
     def create_action(item_id):
         p = payload()
         if p.get("action_type") not in ACTION_TYPES:
-            raise ValueError("Neplatný typ akce")
+            raise ValueError("Invalid action type")
         next_position = db.one("SELECT COALESCE(MAX(position),0)+1 AS value FROM actions WHERE workflow_id=?", (item_id,))["value"]
         action_id = db.execute("INSERT INTO actions(workflow_id,position,action_type,element_id,parameters) VALUES(?,?,?,?,?)", (item_id, next_position, p["action_type"], p.get("element_id"), json.dumps(p.get("parameters", {}))))
         return ok(db.one("SELECT * FROM actions WHERE id=?", (action_id,)), 201)
@@ -681,7 +681,7 @@ def create_app(test_config=None):
             connection.execute("DELETE FROM actions WHERE workflow_id=?", (item_id,))
             for position, action in enumerate(actions, 1):
                 if action.get("action_type") not in ACTION_TYPES:
-                    raise ValueError("Neplatný typ akce")
+                    raise ValueError("Invalid action type")
                 connection.execute("INSERT INTO actions(workflow_id,position,action_type,element_id,parameters,enabled) VALUES(?,?,?,?,?,?)", (item_id, position, action["action_type"], action.get("element_id"), json.dumps(action.get("parameters", {})), int(action.get("enabled", True))))
         return get_workflow(item_id)
 
@@ -751,20 +751,20 @@ def create_app(test_config=None):
             site = db.one("SELECT * FROM sites ORDER BY updated_at DESC, id LIMIT 1")
             workflow = db.one("SELECT * FROM workflows ORDER BY updated_at DESC, id LIMIT 1")
             if not site or not workflow:
-                runner._log("warning", "Autorun: chybí uložená stránka nebo workflow")
+                runner._log("warning", "Autorun: saved site or workflow is missing")
                 return
             browser.start("chrome", site["url"])
             time.sleep(1)
             for profile in autorun_credentials_for_site(site["id"]):
                 if credential_is_present(profile):
-                    runner._log("info", f"Autorun: přihlašuji profil {profile['name']}")
+                    runner._log("info", f"Autorun: logging in profile {profile['name']}")
                     runner._auto_login(profile["id"])
                     time.sleep(1)
                     break
-            runner._log("info", "Autorun: spouštím první workflow v nekonečném loopu")
+            runner._log("info", "Autorun: starting the first workflow in an infinite loop")
             runner.start(workflow["id"], 0)
         except Exception as exc:
-            runner._log("error", f"Autorun selhal: {type(exc).__name__}: {exc}")
+            runner._log("error", f"Autorun failed: {type(exc).__name__}: {exc}")
         finally:
             autorun_lock.release()
 
@@ -795,16 +795,16 @@ CREDENTIAL_ACTION_TYPES = {"click", "double_click", "hover", "focus", "type", "k
 
 
 ACTION_TYPES = {
-    "auto_login": "Automatické přihlášení", "repeat_click": "Kontinuální klikání",
-    "repeat_until": "Akce do objevení objektu",
-    "click": "Kliknout", "double_click": "Dvojklik", "context_click": "Pravé tlačítko",
-    "hover": "Přejet myší", "focus": "Zaměřit", "type": "Napsat text", "clear": "Vymazat",
-    "submit": "Odeslat formulář", "select": "Vybrat z nabídky", "key": "Stisknout klávesu",
-    "scroll_to": "Posunout k elementu", "scroll_by": "Posunout stránku", "mouse_move": "Pohnout myší",
-    "drag_to": "Přetáhnout", "wait": "Čekat", "wait_random": "Čekat náhodně", "wait_for": "Čekat na stav elementu",
-    "navigate": "Přejít na URL", "back": "Zpět", "forward": "Vpřed", "refresh": "Obnovit",
-    "switch_frame": "Přepnout do iframe", "default_content": "Hlavní dokument", "switch_window": "Přepnout okno",
-    "new_tab": "Nová karta", "close_tab": "Zavřít kartu", "alert_accept": "Potvrdit dialog",
-    "alert_dismiss": "Zrušit dialog", "upload": "Nahrát soubor", "screenshot": "Snímek elementu",
-    "script": "Spustit JavaScript", "cookie_set": "Nastavit cookie",
+    "auto_login": "Auto login", "repeat_click": "Continuous clicking",
+    "repeat_until": "Act until object appears",
+    "click": "Click", "double_click": "Double click", "context_click": "Right click",
+    "hover": "Hover", "focus": "Focus", "type": "Type text", "clear": "Clear",
+    "submit": "Submit form", "select": "Select from dropdown", "key": "Press key",
+    "scroll_to": "Scroll to element", "scroll_by": "Scroll page", "mouse_move": "Move mouse",
+    "drag_to": "Drag to", "wait": "Wait", "wait_random": "Wait randomly", "wait_for": "Wait for element state",
+    "navigate": "Go to URL", "back": "Back", "forward": "Forward", "refresh": "Refresh",
+    "switch_frame": "Switch to iframe", "default_content": "Main document", "switch_window": "Switch window",
+    "new_tab": "New tab", "close_tab": "Close tab", "alert_accept": "Accept dialog",
+    "alert_dismiss": "Dismiss dialog", "upload": "Upload file", "screenshot": "Element screenshot",
+    "script": "Run JavaScript", "cookie_set": "Set cookie",
 }

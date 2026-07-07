@@ -1,87 +1,87 @@
-AUTOMAT - WATCHDOG A AUTORUN
-===========================
+AUTOMAT - WATCHDOG AND AUTORUN
+==============================
 
-Co je watchdog
---------------
-Watchdog je maly skryty hlidac produkcni verze Automatu.
-Muze bezet porad, ale samotny Automat znovu spusti jen tehdy, kdyz je v nastaveni programu zapnuty Autorun.
+What the watchdog does
+----------------------
+The watchdog is a small hidden monitor for the production build of Automat.
+It can keep running, but it restarts Automat only when Autorun is enabled in the application settings.
 
-Kdyz Autorun zapnuty neni, watchdog nic nespousti.
+When Autorun is disabled, the watchdog does not start anything.
 
 
-Jak spustit program s watchdogem
---------------------------------
-1. Spustte produkcni verzi pres:
+How to run Automat with the watchdog
+------------------------------------
+1. Start the production build with:
    start.bat
 
-2. Pokud program jeste neni nainstalovany, start.bat nejdriv spusti instalaci.
+2. If Automat is not installed yet, start.bat runs the installer first.
 
-3. start.bat spusti:
-   - server Automatu skryte,
-   - watchdog skryte.
+3. start.bat starts:
+   - the Automat server hidden,
+   - the watchdog hidden.
 
-4. V aplikaci kliknete nahore na ozubene kolecko.
+4. In the application, click the settings gear in the top bar.
 
-5. Zapnete Autorun.
+5. Enable Autorun.
 
-Od te chvile watchdog pri vypnutem nebo spadlem serveru znovu spusti Automat.
+From that moment, when the server is closed or crashes, the watchdog starts Automat again.
 
 
-Jak nastavit spousteni watchdogu po prihlaseni do Windows
----------------------------------------------------------
-Nejjednodussi cesta:
+How to start the watchdog automatically after Windows login
+-----------------------------------------------------------
+The easiest way:
 
-1. Ve slozce produkcni verze spustte:
+1. In the production build folder, run:
    pridat_watchdog_po_prihlaseni.bat
 
-2. Skript vytvori zastupce:
+2. The script creates a shortcut named:
    Automat Watchdog.lnk
 
-   ve slozce Po spusteni aktualniho Windows uzivatele.
+   in the current Windows user's Startup folder.
 
-3. Po dalsim prihlaseni do Windows se watchdog spusti skryte.
+3. After the next Windows login, the watchdog starts hidden.
 
-4. Watchdog zkontroluje databazi Automatu:
-   - pokud Autorun neni zapnuty, neudela nic,
-   - pokud Autorun je zapnuty a Automat nebezi, spusti Automat.
+4. The watchdog checks the Automat database:
+   - if Autorun is disabled, it does nothing,
+   - if Autorun is enabled and Automat is not running, it starts Automat.
 
 
-Jak watchdog odebrat z automatickeho spousteni
-----------------------------------------------
-Spustte:
+How to remove watchdog autostart
+--------------------------------
+Run:
 odebrat_watchdog_po_prihlaseni.bat
 
-Tim se smaze zastupce ze slozky Po spusteni.
+This removes the shortcut from the Startup folder.
 
 
-Rucni nastaveni pres Windows
-----------------------------
-Kdybyste to chtel udelat rucne:
+Manual Windows setup
+--------------------
+If you want to do it manually:
 
-1. Stisknete Win + R.
-2. Zadejte:
+1. Press Win + R.
+2. Enter:
    shell:startup
-3. Do otevrene slozky vytvorte zastupce na:
+3. In the opened folder, create a shortcut to:
    watchdog_hidden.vbs
 
-Lepsi je ale pouzit pripraveny skript pridat_watchdog_po_prihlaseni.bat.
+Using the prepared script `pridat_watchdog_po_prihlaseni.bat` is easier.
 
 
-Dulezite chovani
-----------------
-- Watchdog je jen v produkcni verzi.
-- Vyvojova verze ho nespousti.
-- Watchdog sam o sobe nespousti workflow.
-- Watchdog pouze znovu nastartuje server Automatu.
-- Autorun uvnitr Automatu pak vybere prvni ulozenou stranku, pripadne provede prihlaseni a spusti prvni workflow v nekonecnem loopu.
-- Kdyz Autorun vypnete, watchdog muze zustat bezet, ale Automat znovu nespusti.
+Important behavior
+------------------
+- The watchdog is included only in the production build.
+- The development version does not start it.
+- The watchdog does not run workflows by itself.
+- The watchdog only restarts the Automat server.
+- Autorun inside Automat then selects the first saved site, optionally performs login, and starts the first workflow in an infinite loop.
+- When Autorun is disabled, the watchdog may stay running, but it will not restart Automat.
 
 
-Logy
+Logs
 ----
-Watchdog zapisuje jednoduche logy sem:
+The watchdog writes simple logs here:
 data\watchdog.log
 data\watchdog-start.log
 
-Server Automatu zapisuje log sem:
-data\automat-server.log
+The Automat server writes its log here:
+datautomat-server.log

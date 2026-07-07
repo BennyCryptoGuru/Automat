@@ -147,7 +147,7 @@ def test_missing_element_skips_action_and_continues_workflow():
 
     assert executed == [2]
     assert runner.state["status"] == "completed"
-    assert any("přeskočena" in log["message"] for log in runner.state["logs"])
+    assert any("skipped" in log["message"] for log in runner.state["logs"])
 
 
 def test_infinite_loop_survives_arbitrary_action_errors_until_stop():
@@ -353,7 +353,7 @@ def test_hover_point_uses_visible_part_of_partially_clipped_element():
 def test_hover_point_rejects_element_outside_viewport():
     import pytest
 
-    with pytest.raises(ValueError, match="viditelné části"):
+    with pytest.raises(ValueError, match="visible part"):
         WorkflowRunner._visible_center({
             "x": 1300, "y": 20, "width": 100, "height": 40,
             "viewportWidth": 1200, "viewportHeight": 800,

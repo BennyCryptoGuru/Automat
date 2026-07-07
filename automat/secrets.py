@@ -11,7 +11,7 @@ class SecretVault:
 
     def __init__(self):
         if not hasattr(ctypes, "windll"):
-            raise RuntimeError("Šifrované přihlašovací profily vyžadují Windows")
+            raise RuntimeError("Encrypted login profiles require Windows")
         self.crypt32 = ctypes.windll.crypt32
         self.kernel32 = ctypes.windll.kernel32
 

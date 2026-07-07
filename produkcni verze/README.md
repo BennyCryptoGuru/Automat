@@ -1,8 +1,8 @@
 # Automat
 
-Lokální studio pro tvorbu a spouštění automatizací webového prohlížeče. Backend je v Pythonu, rozhraní v HTML/CSS/JavaScriptu, data v SQLite a prohlížeč ovládá Selenium WebDriver.
+A local studio for building and running browser automations. The backend is Python, the interface is HTML/CSS/JavaScript, data is stored in SQLite, and browser control is powered by Selenium WebDriver.
 
-## Spuštění
+## Run
 
 ```powershell
 python -m venv .venv
@@ -11,41 +11,42 @@ pip install -r requirements.txt
 python run.py
 ```
 
-Studio se otevře na `http://127.0.0.1:5000`. Tlačítko **Spustit Chrome** používá pouze Google Chrome. Selenium Manager automaticky zajistí kompatibilní ChromeDriver. Vlastní cestu ke Chromu lze nastavit proměnnou `AUTOMAT_CHROME_BINARY`.
+The studio opens at `http://127.0.0.1:5000`. The **Start Chrome** button uses Google Chrome only. Selenium Manager automatically provides a compatible ChromeDriver. A custom Chrome binary can be set with `AUTOMAT_CHROME_BINARY`.
 
-Automat nepředává Chromu žádný vlastní `--user-data-dir` a nepoužívá profilové složky v `data`. Každé spuštění řízeného prohlížeče začíná čistou Selenium relací. `run.py` současně dovolí běžet pouze jedné instanci Automatu.
+Automat does not pass a custom `--user-data-dir` to Chrome and does not use browser profile folders in `data`. Every controlled browser launch starts a clean Selenium session. `run.py` allows only one Automat instance to run at a time.
 
-## Základní postup
+## Basic Workflow
 
-1. Spusťte prohlížeč, vložte URL a klikněte na **Přejít**.
-2. Přihlaste se ručně podle potřeby. Po ukončení řízeného Chromu další spuštění začíná znovu čistou relací.
-3. Klikněte na **Najít objekt**, poté přímo na element v řízeném okně a objekt uložte.
-4. Vytvořte workflow, přidejte seřazené akce a spusťte je tlačítkem Play.
-5. Pause pozastaví workflow mezi akcemi i během časových čekání; Play pokračuje a Stop běh ukončí.
+1. Start the browser, enter a URL, and click **Go**.
+2. Log in manually when needed. After the controlled Chrome window is closed, the next launch starts with a clean session again.
+3. Click **Find object**, click an element in the controlled browser window, and save the object.
+4. Create a workflow, add ordered actions, and start it with Play.
+5. Pause stops the workflow between actions and during timed waits; Play resumes it and Stop ends the run.
 
-## Podporované možnosti
+## Supported Features
 
-- Lokátory: ID, name, class name, tag name, CSS selector, XPath, link text a partial link text.
-- Více alternativních lokátorů pro jeden objekt, hierarchie podobjektů a cesta přes iframe.
-- Kliknutí, dvojklik, pravé tlačítko, hover, focus, text, klávesy, select, drag & drop a pohyb myši.
-- Pevné a náhodné čekání, explicitní čekání na přítomnost, viditelnost, kliknutelnost nebo skrytí.
-- Akce **Čekat** a **Čekat náhodně** zobrazují v aktivním workflow živý odpočet a průběh; Pause odpočet skutečně zmrazí.
-- Šifrované přihlašovací profily (Windows DPAPI) a automatické vyplnění uživatele, hesla a volitelné odeslání.
-- Přímé tlačítko **Přihlásit** u profilu otevře přiřazenou stránku a okamžitě provede přihlášení i bez workflow.
-- Automatické přihlášení po aktivaci každého pole čeká nejméně jednu sekundu před zápisem a před odesláním formuláře.
-- Přihlašovací pole lze uložit přímo jako `INPUT/TEXTAREA` nebo přes propojený `LABEL` (`for`, `control`, `aria-labelledby`).
-- Kontinuální klikání s nastavitelným počtem kliknutí za sekundu a dobou běhu; `0` znamená běh do ručního zastavení.
-- Opakování akce na Objektu 1 do zobrazení Objektu 2; oba objekty mohou být stejné.
-- Hover vycentruje objekt, používá jeho viditelný střed a při chybě hranic využije přesný pohyb myši přes Chrome DevTools.
-- Pokud běžná akce nenajde svůj element nebo vyprší čekání, zapíše varování, krok přeskočí a pokračuje další akcí.
-- Spuštění celého workflow ve smyčce s přesným počtem cyklů nebo nekonečně do stisknutí Stop.
-- Nekonečný Loop (`0`) se nezastaví kvůli chybě jednotlivé akce ani nenalezenému elementu; chybu zapíše, krok přeskočí a běží až do Stop.
-- Export workflow do verzovaného `.automat.json` včetně akcí, stránky a používaných objektů a následný import s automatickým přemapováním vazeb.
-- Navigace, historie, refresh, karty/okna, iframe, dialogy, upload, cookies, screenshoty a JavaScript.
-- Kontextové PNG náhledy uložených elementů: objekt se vycentruje a snímek se ořízne s dynamickým okrajem na přiměřený čtvercový nebo obdélníkový formát.
+- Locators: ID, name, class name, tag name, CSS selector, XPath, link text, and partial link text.
+- Multiple fallback locators for one object, subobject hierarchies, and iframe paths.
+- Click, double click, right click, hover, focus, text input, keys, select, drag & drop, and mouse movement.
+- Fixed and random waits, plus explicit waits for presence, visibility, clickability, or hidden state.
+- **Wait** and **Wait randomly** show a live countdown in the active workflow; Pause freezes the countdown properly.
+- Encrypted login profiles with Windows DPAPI and automatic filling of username, password, optional extra steps, and optional submit.
+- A direct **Log in** button on each profile opens the assigned site and performs login without a workflow.
+- Automatic login waits at least one second after activating each field and before submitting the form.
+- Login fields can be saved directly as `INPUT/TEXTAREA` or through linked `LABEL` metadata (`for`, `control`, `aria-labelledby`).
+- Continuous clicking with configurable clicks per second and duration; `0` means run until manually stopped.
+- Repeat an action on Object 1 until Object 2 appears; both objects may be the same.
+- Hover centers the object, uses its visible center, and falls back to precise Chrome DevTools mouse movement when needed.
+- If a normal action cannot find its element or times out, Automat logs a warning, skips the step, and continues.
+- Run the whole workflow in a finite loop or infinitely until Stop.
+- Infinite loop (`0`) does not stop because of a single failed action or missing element; it logs the issue, skips the step, and continues until Stop.
+- Workflow export/import as versioned `.automat.json`, including actions, site references, and used objects with automatic remapping.
+- Navigation, history, refresh, tabs/windows, iframes, dialogs, upload, cookies, screenshots, and JavaScript execution.
+- Context PNG previews for saved elements: the object is centered and cropped with a dynamic margin into a suitable square or rectangle.
+- Frontend language switcher: English is the default UI language and Czech is available as a separate option.
 
-## Poznámky k bezpečnosti
+## Security Notes
 
-Automat běží pouze na `127.0.0.1`. Hodnoty přihlašovacích profilů jsou v SQLite šifrované pomocí Windows DPAPI a lze je dešifrovat pouze pod stejným uživatelským účtem Windows. Akce **Spustit JavaScript** je záměrně mocná a měla by se používat jen s vlastním nebo důvěryhodným kódem.
+Automat listens only on `127.0.0.1`. Login profile values are encrypted in SQLite with Windows DPAPI and can be decrypted only under the same Windows user account. The **Run JavaScript** action is intentionally powerful and should be used only with your own or trusted code.
 
-Oficiální zdroje návrhu: [Selenium locators](https://www.selenium.dev/documentation/webdriver/elements/locators/), [element finders](https://www.selenium.dev/documentation/webdriver/elements/finders/), [Actions API](https://www.selenium.dev/documentation/webdriver/actions_api/) a [waits](https://www.selenium.dev/documentation/webdriver/waits/).
+Design references: [Selenium locators](https://www.selenium.dev/documentation/webdriver/elements/locators/), [element finders](https://www.selenium.dev/documentation/webdriver/elements/finders/), [Actions API](https://www.selenium.dev/documentation/webdriver/actions_api/), and [waits](https://www.selenium.dev/documentation/webdriver/waits/).

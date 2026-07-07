@@ -148,11 +148,11 @@ class BrowserManager:
                     errors.append(f"{browser_name}: {self._error_message(exc)}")
                     break
 
-            detail = "; ".join(errors[-4:]) or "Selenium nevrátilo detail chyby"
+            detail = "; ".join(errors[-4:]) or "Selenium did not return error details"
             raise RuntimeError(
-                "Chrome nemohl vytvořit čistou relaci Selenium. "
-                "Automat používá pouze Chrome a žádné vlastní profilové složky. "
-                f"Poslední chyby: {detail}"
+                "Chrome could not create a clean Selenium session. "
+                "Automat uses only Chrome and no custom profile folders. "
+                f"Last errors: {detail}"
             )
 
     def _options(self, binary, initial_url=None, stealth=False):
@@ -242,12 +242,12 @@ class BrowserManager:
     def normalize_url(url):
         url = str(url or "").strip()
         if not url:
-            raise ValueError("Zadejte adresu webu")
+            raise ValueError("Enter a website address")
         if "://" not in url:
             url = "https://" + url
         parsed = urlparse(url)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-            raise ValueError("Použijte platnou webovou adresu začínající http:// nebo https://")
+            raise ValueError("Use a valid web address starting with http:// or https://")
         return url
 
     def status(self):
@@ -337,7 +337,7 @@ class BrowserManager:
                     return driver.find_element(BY_MAP[attempt["strategy"]], attempt["locator"])
                 except (KeyError, NoSuchElementException) as exc:
                     last_error = exc
-            raise NoSuchElementException(f"Element nenalezen: {strategy}={locator}") from last_error
+            raise NoSuchElementException(f"Element not found: {strategy}={locator}") from last_error
 
     def quit(self):
         with self.lock:

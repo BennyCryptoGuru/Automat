@@ -18,6 +18,8 @@ button, select, input, textarea { font: inherit; }
 .icon-button { height: 100%; width: 42px; border: 0; background: transparent; color: #77808c; font-size: 22px; cursor: pointer; }
 .go-button { height: 34px; margin-right: 4px; border: 0; border-radius: 8px; padding: 0 18px; background: var(--ink); color: #fff; font-weight: 650; cursor: pointer; }
 .runner-controls { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.language-switch { height: 32px; padding: 0 7px; border: 1px solid var(--line); border-radius: 9px; display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 700; background: #fff; }
+.language-switch select { border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 11px; font-weight: 700; cursor: pointer; }
 .loop-toggle { height: 32px; padding: 0 9px; border: 1px solid var(--line); border-radius: 9px; display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; font-weight: 700; cursor: pointer; }
 .loop-toggle input { accent-color: var(--violet); margin: 0; }
 .loop-toggle:has(input:checked) { color: var(--violet); border-color: #cfc7f6; background: #f6f4ff; }

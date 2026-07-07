@@ -72,7 +72,7 @@ def test_session_failure_never_creates_profile_directories(tmp_path, monkeypatch
         lambda **_kwargs: (_ for _ in ()).throw(SessionNotCreatedException("relace spadla")),
     )
 
-    with pytest.raises(RuntimeError, match="Chrome nemohl"):
+    with pytest.raises(RuntimeError, match="Chrome could not"):
         manager.start("chrome")
 
     assert manager.profile_dir is None
@@ -89,7 +89,7 @@ def test_failed_session_is_not_retried_to_avoid_extra_windows(tmp_path, monkeypa
 
     monkeypatch.setattr("automat.browser.webdriver.Chrome", start_driver)
 
-    with pytest.raises(RuntimeError, match="Chrome nemohl"):
+    with pytest.raises(RuntimeError, match="Chrome could not"):
         manager.start("chrome")
 
     assert len(starts) == 1
@@ -115,7 +115,7 @@ def test_normalize_web_url():
 
 
 def test_internal_browser_url_is_rejected():
-    with pytest.raises(ValueError, match="platnou webovou adresu"):
+    with pytest.raises(ValueError, match="valid web address"):
         BrowserManager.normalize_url("chrome://newtab/")
 
 

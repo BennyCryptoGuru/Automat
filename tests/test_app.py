@@ -49,7 +49,7 @@ def test_wait_countdown_is_rendered_in_active_workflow(client):
     html = client.get("/").get_data(as_text=True)
     assert "countdown.remaining" in javascript
     assert "countdown-track" in javascript
-    assert "Čekat náhodně" in html
+    assert "Wait randomly" in html
 
 
 def test_running_status_uses_pulsing_indicator(client):
@@ -88,18 +88,31 @@ def test_autorun_settings_controls_are_visible(client):
     assert 'id="stealthRunStatus"' in html
     assert "/api/settings" in javascript
     assert "renderSettings" in javascript
-    assert "Autorun je zapnutý" in javascript
-    assert "Stealth run je zapnutý" in javascript
+    assert "Autorun is enabled" in javascript
+    assert "Stealth run is enabled" in javascript
     assert ".settings-toggle" in stylesheet
     assert ".toast.success" in stylesheet
+
+
+def test_language_switcher_is_available(client):
+    html = client.get("/").get_data(as_text=True)
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    stylesheet = client.get("/static/style.css").get_data(as_text=True)
+
+    assert '<html lang="en">' in html
+    assert 'id="languageSelect"' in html
+    assert 'value="cs">&#268;e&#353;tina' in html
+    assert "setLanguage" in javascript
+    assert "automat_language" in javascript
+    assert ".language-switch" in stylesheet
 
 
 def test_runner_controls_are_enabled_only_for_valid_state(client):
     html = client.get("/").get_data(as_text=True)
     javascript = client.get("/static/app.js").get_data(as_text=True)
     stylesheet = client.get("/static/style.css").get_data(as_text=True)
-    assert 'id="pauseButton" title="Pozastavit" disabled' in html
-    assert 'id="stopButton" title="Zastavit" disabled' in html
+    assert 'id="pauseButton" title="Pause" disabled' in html
+    assert 'id="stopButton" title="Stop" disabled' in html
     assert '$("#playButton").disabled=running' in javascript
     assert '$("#pauseButton").disabled=!running' in javascript
     assert '$("#stopButton").disabled=!(running||paused)' in javascript
@@ -316,7 +329,7 @@ def test_workflow_export_and_import_preserves_element_links(client):
 
 
 def test_workflow_import_rejects_unknown_format(client):
-    with pytest.raises(ValueError, match="podporovaná záloha"):
+    with pytest.raises(ValueError, match="supported Automat backup"):
         client.post("/api/workflows/import", json={"format": "something-else", "version": 1})
 
 
@@ -359,7 +372,7 @@ def test_element_export_and_import_preserves_site_and_parent(client):
 
 
 def test_element_import_rejects_unknown_format(client):
-    with pytest.raises(ValueError, match="záloha objektů"):
+    with pytest.raises(ValueError, match="object backup"):
         client.post("/api/elements/import", json={"format": "something-else", "version": 1})
 
 
