@@ -11,7 +11,7 @@ from waitress import serve
 from automat.app import create_app
 
 
-APP_LABEL = "produkcni verze"
+APP_LABEL = "production version"
 APP_URL = "http://127.0.0.1:5000"
 DATA_DIR = Path(__file__).resolve().parent / "data"
 

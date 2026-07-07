@@ -14,6 +14,6 @@ if not exist ".venv\Scripts\python.exe" (
   )
 )
 
-echo Spoustim Automat - produkcni verze...
+echo Starting Automat - production version...
 wscript.exe "%~dp0start_hidden.vbs"
 exit /b 0

@@ -2,11 +2,11 @@
 setlocal
 cd /d "%~dp0"
 
-if not exist "produkcni verze\aktualizovat.bat" (
-  echo Aktualizacni skript produkcni verze nebyl nalezen.
-  echo Ocekavana cesta: %~dp0produkcni verze\aktualizovat.bat
+if not exist "production version\aktualizovat.bat" (
+  echo Production update script was not found.
+  echo Expected path: %~dp0production version\aktualizovat.bat
   pause
   exit /b 1
 )
 
-call "produkcni verze\aktualizovat.bat" %*
+call "production version\aktualizovat.bat" %*
