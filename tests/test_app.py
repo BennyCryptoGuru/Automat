@@ -1,0 +1,400 @@
+import json
+import tempfile
+from pathlib import Path
+
+import pytest
+
+from automat.app import create_app
+
+
+@pytest.fixture()
+def client():
+    with tempfile.TemporaryDirectory() as directory:
+        app = create_app({"TESTING": True, "DATABASE": str(Path(directory) / "test.db")})
+        yield app.test_client()
+
+
+def test_index_and_bootstrap(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "Automat" in response.get_data(as_text=True)
+    data = client.get("/api/bootstrap").get_json()
+    assert data["ok"] is True
+    assert "css selector" in data["data"]["locator_strategies"]
+    assert "xpath" in data["data"]["locator_strategies"]
+
+
+def test_dialog_cancel_buttons_do_not_submit_forms(client):
+    html = client.get("/").get_data(as_text=True)
+    assert html.count('type="button" data-close-dialog') == 10
+    assert 'button.closest(\'dialog\').close()' in client.get("/static/app.js").get_data(as_text=True)
+
+
+def test_browser_internal_url_cannot_replace_address_input(client):
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    assert '/^https?:\\/\\//i.test(b.url||"")' in javascript
+    assert 'const target=String(value||$("#urlInput").value).trim()' in javascript
+
+
+def test_status_poll_does_not_overlap(client):
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    assert "if(runnerPollRunning)return" in javascript
+    assert "finally{runnerPollRunning=false}" in javascript
+    assert "if(browserPollRunning)return" in javascript
+    assert "finally{browserPollRunning=false}" in javascript
+
+
+def test_wait_countdown_is_rendered_in_active_workflow(client):
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    html = client.get("/").get_data(as_text=True)
+    assert "countdown.remaining" in javascript
+    assert "countdown-track" in javascript
+    assert "Čekat náhodně" in html
+
+
+def test_running_status_uses_pulsing_indicator(client):
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    stylesheet = client.get("/static/style.css").get_data(as_text=True)
+    assert 'running:"RUNNING"' in javascript
+    assert "Loop ·" not in javascript
+    assert "@keyframes runningGlow" in stylesheet
+    assert "animation: runningGlow" in stylesheet
+
+
+def test_autorun_setting_is_persisted(client):
+    bootstrap = client.get("/api/bootstrap").get_json()["data"]
+    assert bootstrap["settings"]["autorun"] is False
+    assert bootstrap["settings"]["stealth_run"] is False
+
+    updated = client.put("/api/settings", json={"autorun": True}).get_json()["data"]
+    assert updated["autorun"] is True
+    assert client.get("/api/bootstrap").get_json()["data"]["settings"]["autorun"] is True
+
+    updated = client.put("/api/settings", json={"stealth_run": True}).get_json()["data"]
+    assert updated["stealth_run"] is True
+    assert client.get("/api/bootstrap").get_json()["data"]["settings"]["stealth_run"] is True
+
+
+def test_autorun_settings_controls_are_visible(client):
+    html = client.get("/").get_data(as_text=True)
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    stylesheet = client.get("/static/style.css").get_data(as_text=True)
+
+    assert 'id="settingsButton"' in html
+    assert 'id="settingsDialog"' in html
+    assert 'id="autorunEnabled"' in html
+    assert 'id="autorunStatus"' in html
+    assert 'id="stealthRunEnabled"' in html
+    assert 'id="stealthRunStatus"' in html
+    assert "/api/settings" in javascript
+    assert "renderSettings" in javascript
+    assert "Autorun je zapnutý" in javascript
+    assert "Stealth run je zapnutý" in javascript
+    assert ".settings-toggle" in stylesheet
+    assert ".toast.success" in stylesheet
+
+
+def test_runner_controls_are_enabled_only_for_valid_state(client):
+    html = client.get("/").get_data(as_text=True)
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    stylesheet = client.get("/static/style.css").get_data(as_text=True)
+    assert 'id="pauseButton" title="Pozastavit" disabled' in html
+    assert 'id="stopButton" title="Zastavit" disabled' in html
+    assert '$("#playButton").disabled=running' in javascript
+    assert '$("#pauseButton").disabled=!running' in javascript
+    assert '$("#stopButton").disabled=!(running||paused)' in javascript
+    assert ".control:disabled" in stylesheet
+
+
+def test_saved_items_have_individual_delete_controls(client):
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    html = client.get("/").get_data(as_text=True)
+    assert "data-delete-site" in javascript
+    assert "data-delete-action" in javascript
+    assert 'id="deleteWorkflow"' in html
+
+
+def test_saved_element_has_edit_control(client):
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    assert "data-edit-element" in javascript
+    assert "openEditElement" in javascript
+    assert "syncElementLocatorFromStrategy" in javascript
+    assert "elementLocatorAlternatives" in javascript
+    assert "elements.strategy.onchange" in javascript
+
+
+def test_site_element_workflow_and_actions(client):
+    site = client.post("/api/sites", json={"name": "Selenium", "url": "https://selenium.dev"}).get_json()["data"]
+    element = client.post("/api/elements", json={
+        "site_id": site["id"], "name": "Documentation", "strategy": "css selector",
+        "locator": "a[href*='documentation']", "capture_preview": False,
+        "alternatives": [{"strategy": "link text", "locator": "Documentation"}],
+    }).get_json()["data"]
+    workflow = client.post("/api/workflows", json={"site_id": site["id"], "name": "Test"}).get_json()["data"]
+    response = client.post(f"/api/workflows/{workflow['id']}/actions", json={
+        "action_type": "click", "element_id": element["id"], "parameters": {},
+    })
+    assert response.status_code == 201
+    loaded = client.get(f"/api/workflows/{workflow['id']}").get_json()["data"]
+    assert len(loaded["actions"]) == 1
+    assert loaded["actions"][0]["element_id"] == element["id"]
+
+    updated = client.put(f"/api/elements/{element['id']}", json={
+        "site_id": site["id"], "name": "Dokumentace upravená", "strategy": "xpath",
+        "locator": "//a[@href='/documentation']", "parent_id": None,
+    }).get_json()["data"]
+    assert updated["id"] == element["id"]
+    assert updated["name"] == "Dokumentace upravená"
+    loaded_again = client.get(f"/api/workflows/{workflow['id']}").get_json()["data"]
+    assert loaded_again["actions"][0]["element_id"] == element["id"]
+
+
+def test_encrypted_credential_profile_is_not_exposed(client):
+    site = client.post("/api/sites", json={"name": "Login", "url": "https://example.com"}).get_json()["data"]
+    username = client.post("/api/elements", json={"name": "User", "strategy": "id", "locator": "user", "capture_preview": False}).get_json()["data"]
+    password = client.post("/api/elements", json={"name": "Password", "strategy": "id", "locator": "password", "capture_preview": False}).get_json()["data"]
+    response = client.post("/api/credentials", json={
+        "site_id": site["id"], "name": "Můj účet", "username": "secret-user",
+        "password": "secret-password", "username_element_id": username["id"],
+        "password_element_id": password["id"],
+    })
+
+    assert response.status_code == 201
+    assert "secret" not in response.get_data(as_text=True)
+    bootstrap = client.get("/api/bootstrap").get_json()["data"]
+    assert bootstrap["credentials"][0]["name"] == "Můj účet"
+    assert "password_cipher" not in bootstrap["credentials"][0]
+    stored = client.application.extensions["automat_db"].one("SELECT * FROM credentials")
+    assert b"secret-user" not in stored["username_cipher"]
+    assert b"secret-password" not in stored["password_cipher"]
+
+    credential = response.get_json()["data"]
+    workflow = client.post("/api/workflows", json={"site_id": site["id"], "name": "Login backup"}).get_json()["data"]
+    client.post(f"/api/workflows/{workflow['id']}/actions", json={
+        "action_type": "auto_login", "parameters": {"credential_id": credential["id"]},
+    })
+    exported = client.get(f"/api/workflows/{workflow['id']}/export").get_json()
+    exported_text = json.dumps(exported)
+    assert "secret-user" not in exported_text
+    assert "secret-password" not in exported_text
+    assert exported["actions"][0]["parameters"] == {"credential_ref": "Můj účet"}
+
+
+def test_credential_card_has_direct_login_control(client):
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    assert "data-login-credential" in javascript
+    assert "/login`" in javascript
+
+
+def test_credential_profile_can_be_updated_without_retyping_secret(client):
+    username = client.post("/api/elements", json={"name": "User", "strategy": "id", "locator": "user", "capture_preview": False}).get_json()["data"]
+    password = client.post("/api/elements", json={"name": "Password", "strategy": "id", "locator": "password", "capture_preview": False}).get_json()["data"]
+    credential = client.post("/api/credentials", json={
+        "name": "Původní", "username": "secret-user", "password": "secret-password",
+        "username_element_id": username["id"], "password_element_id": password["id"],
+    }).get_json()["data"]
+
+    updated = client.put(f"/api/credentials/{credential['id']}", json={
+        "site_id": None, "name": "Upravený", "username": "", "password": "",
+        "username_element_id": username["id"], "password_element_id": password["id"],
+        "submit_element_id": None,
+    }).get_json()["data"]
+    stored = client.application.extensions["automat_db"].one("SELECT * FROM credentials WHERE id=?", (credential["id"],))
+    vault = client.application.extensions["automat_vault"]
+
+    assert updated["name"] == "Upravený"
+    assert "password_cipher" not in updated
+    assert vault.decrypt(stored["username_cipher"]) == "secret-user"
+    assert vault.decrypt(stored["password_cipher"]) == "secret-password"
+
+
+def test_credential_profile_can_store_extra_login_actions(client):
+    username = client.post("/api/elements", json={"name": "User", "strategy": "id", "locator": "user", "capture_preview": False}).get_json()["data"]
+    password = client.post("/api/elements", json={"name": "Password", "strategy": "id", "locator": "password", "capture_preview": False}).get_json()["data"]
+    checkbox = client.post("/api/elements", json={"name": "Remember", "strategy": "id", "locator": "remember", "capture_preview": False}).get_json()["data"]
+    credential = client.post("/api/credentials", json={
+        "name": "S kroky", "username": "secret-user", "password": "secret-password",
+        "username_element_id": username["id"], "password_element_id": password["id"],
+        "extra_actions": [{"action_type": "click", "element_id": checkbox["id"]}, {"action_type": "wait", "seconds": 2}],
+    }).get_json()["data"]
+
+    assert credential["extra_actions"] == [{"action_type": "click", "element_id": checkbox["id"]}, {"action_type": "wait", "seconds": 2.0}]
+    bootstrap = client.get("/api/bootstrap").get_json()["data"]
+    assert bootstrap["credentials"][0]["extra_actions"][0]["element_id"] == checkbox["id"]
+
+
+def test_credential_export_and_import_roundtrip(client):
+    site = client.post("/api/sites", json={"name": "Login", "url": "https://login.example"}).get_json()["data"]
+    username = client.post("/api/elements", json={"site_id": site["id"], "name": "User", "strategy": "id", "locator": "user", "capture_preview": False}).get_json()["data"]
+    password = client.post("/api/elements", json={"site_id": site["id"], "name": "Password", "strategy": "id", "locator": "password", "capture_preview": False}).get_json()["data"]
+    submit = client.post("/api/elements", json={"site_id": site["id"], "name": "Submit", "strategy": "id", "locator": "submit", "capture_preview": False}).get_json()["data"]
+    remember = client.post("/api/elements", json={"site_id": site["id"], "name": "Remember", "strategy": "id", "locator": "remember", "capture_preview": False}).get_json()["data"]
+    credential = client.post("/api/credentials", json={
+        "site_id": site["id"], "name": "Zalohovany profil", "username": "backup-user",
+        "password": "backup-password", "username_element_id": username["id"],
+        "password_element_id": password["id"], "submit_element_id": submit["id"],
+        "extra_actions": [{"action_type": "click", "element_id": remember["id"]}],
+    }).get_json()["data"]
+
+    exported = client.get("/api/credentials/export")
+    archive = exported.get_json()
+    assert exported.status_code == 200
+    assert exported.headers["Content-Disposition"].endswith('prihlasovaci-profily.automat.json"')
+    assert archive["format"] == "automat-credentials"
+    assert archive["credentials"][0]["username"] == "backup-user"
+    assert archive["credentials"][0]["password"] == "backup-password"
+    assert archive["credentials"][0]["username_element_ref"]
+    assert archive["credentials"][0]["extra_actions"][0]["element_ref"]
+
+    client.delete(f"/api/credentials/{credential['id']}")
+    imported = client.post("/api/credentials/import", json=archive).get_json()["data"]
+    stored = client.application.extensions["automat_db"].one("SELECT * FROM credentials WHERE name=?", ("Zalohovany profil",))
+    vault = client.application.extensions["automat_vault"]
+
+    assert imported["created"] == 1
+    assert imported["updated"] == 0
+    assert imported["total"] == 1
+    assert vault.decrypt(stored["username_cipher"]) == "backup-user"
+    assert vault.decrypt(stored["password_cipher"]) == "backup-password"
+    assert stored["submit_element_id"] == submit["id"]
+    assert stored["extra_actions"][0]["element_id"] == remember["id"]
+
+
+def test_credential_backup_controls_are_visible(client):
+    html = client.get("/").get_data(as_text=True)
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+
+    assert 'id="credentialTools"' in html
+    assert 'id="exportCredentials"' in html
+    assert 'id="importCredentials"' in html
+    assert 'id="credentialImportFile"' in html
+    assert "/api/credentials/export" in javascript
+    assert "/api/credentials/import" in javascript
+    assert 'id="addCredentialAction"' in html
+    assert 'id="credentialExtraActions"' in html
+    assert "readCredentialExtraActions" in javascript
+
+
+def test_new_continuous_action_types_are_available(client):
+    action_types = client.get("/api/bootstrap").get_json()["data"]["action_types"]
+    assert {"auto_login", "repeat_click", "repeat_until"} <= set(action_types)
+
+
+def test_loop_controls_and_repeat_count_are_connected(client):
+    html = client.get("/").get_data(as_text=True)
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    assert 'id="loopEnabled" type="checkbox" checked' in html
+    assert 'id="loopCount"' in html
+    assert 'id="loopCount" class="loop-count" type="number" min="0" value="0"' in html
+    assert "{repeat_count}" in javascript
+
+
+def test_workflow_export_and_import_preserves_element_links(client):
+    site = client.post("/api/sites", json={"name": "Backup", "url": "https://example.com"}).get_json()["data"]
+    source = client.post("/api/elements", json={"site_id": site["id"], "name": "Zdroj", "strategy": "id", "locator": "source", "capture_preview": False}).get_json()["data"]
+    target = client.post("/api/elements", json={"site_id": site["id"], "name": "Cíl", "strategy": "css selector", "locator": ".target", "capture_preview": False}).get_json()["data"]
+    workflow = client.post("/api/workflows", json={"site_id": site["id"], "name": "Záloha"}).get_json()["data"]
+    client.post(f"/api/workflows/{workflow['id']}/actions", json={
+        "action_type": "repeat_until", "element_id": source["id"],
+        "parameters": {"target_element_id": target["id"], "operation": "click", "interval_seconds": 1},
+    })
+
+    exported = client.get(f"/api/workflows/{workflow['id']}/export")
+    archive = exported.get_json()
+    assert exported.status_code == 200
+    assert exported.headers["Content-Disposition"].endswith('.automat.json"')
+    assert archive["format"] == "automat-workflow"
+    assert archive["actions"][0]["element_ref"]
+    assert archive["actions"][0]["parameters"]["target_element_ref"]
+    assert "target_element_id" not in archive["actions"][0]["parameters"]
+
+    imported = client.post("/api/workflows/import", json=archive).get_json()["data"]
+    loaded = client.get(f"/api/workflows/{imported['workflow']['id']}").get_json()["data"]
+    assert loaded["name"] == "Záloha (import)"
+    assert loaded["actions"][0]["element_id"] == source["id"]
+    assert loaded["actions"][0]["parameters"]["target_element_id"] == target["id"]
+
+
+def test_workflow_import_rejects_unknown_format(client):
+    with pytest.raises(ValueError, match="podporovaná záloha"):
+        client.post("/api/workflows/import", json={"format": "something-else", "version": 1})
+
+
+def test_workflow_backup_controls_are_visible(client):
+    html = client.get("/").get_data(as_text=True)
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    assert 'id="exportWorkflow"' in html
+    assert 'id="importWorkflow"' in html
+    assert "/api/workflows/import" in javascript
+
+
+def test_element_export_and_import_preserves_site_and_parent(client):
+    site = client.post("/api/sites", json={"name": "Objekty", "url": "https://objects.example"}).get_json()["data"]
+    parent = client.post("/api/elements", json={
+        "site_id": site["id"], "name": "Rodič", "strategy": "id", "locator": "parent",
+        "alternatives": [{"strategy": "css selector", "locator": "#parent"}], "capture_preview": False,
+    }).get_json()["data"]
+    child = client.post("/api/elements", json={
+        "site_id": site["id"], "name": "Podobjekt", "strategy": "css selector", "locator": ".child",
+        "parent_id": parent["id"], "metadata": {"tag": "button"}, "capture_preview": False,
+    }).get_json()["data"]
+
+    exported = client.get("/api/elements/export")
+    archive = exported.get_json()
+    assert exported.status_code == 200
+    assert exported.headers["Content-Disposition"].endswith('objekty.automat.json"')
+    assert archive["format"] == "automat-elements"
+    assert len(archive["elements"]) == 2
+    assert next(item for item in archive["elements"] if item["name"] == "Podobjekt")["parent_ref"]
+
+    client.delete(f"/api/elements/{child['id']}")
+    client.delete(f"/api/elements/{parent['id']}")
+    imported = client.post("/api/elements/import", json=archive).get_json()["data"]
+    values = client.get("/api/bootstrap").get_json()["data"]["elements"]
+    imported_parent = next(item for item in values if item["name"] == "Rodič")
+    imported_child = next(item for item in values if item["name"] == "Podobjekt")
+    assert imported == {"created": 2, "reused": 0, "total": 2}
+    assert imported_child["parent_id"] == imported_parent["id"]
+    assert imported_child["metadata"] == {"tag": "button"}
+
+
+def test_element_import_rejects_unknown_format(client):
+    with pytest.raises(ValueError, match="záloha objektů"):
+        client.post("/api/elements/import", json={"format": "something-else", "version": 1})
+
+
+def test_action_clipboard_and_gear_menus_are_connected(client):
+    html = client.get("/").get_data(as_text=True)
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    assert 'id="workflowTools"' in html
+    assert 'id="selectAllActions"' in html
+    assert 'id="copyActions"' in html
+    assert 'id="pasteActions"' in html
+    assert 'id="insertPositionLabel"' in html
+    assert 'id="actionContextMenu"' in html
+    assert 'id="contextPasteBefore"' in html
+    assert 'id="contextPasteAfter"' in html
+    assert 'id="actionDialogTitle"' in html
+    assert 'id="credentialDialogTitle"' in html
+    assert 'id="importElements"' in html
+    assert 'id="exportElements"' in html
+    assert "selectedActions:new Set()" in javascript
+    assert "data-edit-action" in javascript
+    assert "data-edit-credential" in javascript
+    assert "moveSelectedActionToPosition" in javascript
+    assert "moveBuffer" in javascript
+    assert 'key==="c"' in javascript
+    assert 'key==="v"' in javascript
+    assert 'key==="Enter"' in javascript
+    assert "showActionContextMenu" in javascript
+    assert "insert-before" in javascript
+    assert "/api/elements/import" in javascript
+    assert "/api/elements/export" in javascript
+
+
+def test_rejects_unknown_locator_and_action(client):
+    with pytest.raises(ValueError):
+        client.post("/api/elements", json={"name": "Bad", "strategy": "magic", "locator": "x"})
+    workflow = client.post("/api/workflows", json={"name": "Test"}).get_json()["data"]
+    with pytest.raises(ValueError):
+        client.post(f"/api/workflows/{workflow['id']}/actions", json={"action_type": "teleport"})

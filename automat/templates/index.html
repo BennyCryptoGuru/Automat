@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Automat · Browser studio</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <button class="brand" id="toggleSidebar" title="Skrýt panel"><span class="brand-mark">A</span><span>Automat</span></button>
+    <div class="address-wrap">
+      <span class="lock-dot"></span>
+      <input id="urlInput" type="text" placeholder="Zadejte adresu webu, například selenium.dev" autocomplete="off">
+      <button class="icon-button" id="bookmarkButton" title="Uložit stránku">▱</button>
+      <button class="go-button" id="navigateButton">Přejít</button>
+    </div>
+    <div class="runner-controls">
+      <span class="status-pill idle" id="runnerPill"><i></i><span>Připraveno</span></span>
+      <label class="loop-toggle" title="Opakovat celé workflow"><input id="loopEnabled" type="checkbox" checked><span>Loop</span></label>
+      <input id="loopCount" class="loop-count" type="number" min="0" value="0" title="Počet cyklů; 0 = nekonečno" aria-label="Počet cyklů">
+      <button class="control play" id="playButton" title="Spustit">▶</button>
+      <button class="control" id="pauseButton" title="Pozastavit" disabled>Ⅱ</button>
+      <button class="control stop" id="stopButton" title="Zastavit" disabled>■</button>
+      <button class="settings-button" id="settingsButton" title="Nastaveni" aria-label="Nastaveni">⚙</button>
+    </div>
+  </header>
+
+  <aside class="sidebar" id="sidebar">
+    <nav class="tabs">
+      <button class="active" data-tab="workflow">Akce</button>
+      <button data-tab="library">Knihovna</button>
+    </nav>
+    <section id="workflowTab" class="tab-panel active">
+      <div class="section-heading"><div><small>AKTUÁLNÍ WORKFLOW</small><select id="workflowSelect"><option value="">Vyberte workflow</option></select></div><div class="heading-actions"><details class="tools-menu" id="workflowTools"><summary title="Nástroje workflow" aria-label="Nástroje workflow">⚙</summary><div class="tools-menu-popover"><button id="importWorkflow">Importovat workflow</button><button id="exportWorkflow" hidden>Exportovat workflow</button></div><input id="workflowImportFile" type="file" accept=".json,.automat.json,application/json" hidden></details><button id="deleteWorkflow" class="item-delete header-delete" title="Odstranit workflow" aria-label="Odstranit workflow" hidden>×</button><button id="newWorkflow" class="add" title="Nové workflow">＋</button></div></div>
+      <div class="action-clipboard" id="actionClipboard"><button id="selectAllActions">Vybrat vše</button><span id="insertPositionLabel">Vložení na konec</span><button id="copyActions" disabled>Kopírovat</button><button id="pasteActions" disabled>Vložit</button></div>
+      <div id="actionsList" class="actions-list empty-state"><p>Zatím žádné akce</p><span>Vytvořte workflow a přidejte první krok.</span></div>
+      <button class="primary wide" id="addAction">＋ Přidat akci</button>
+    </section>
+    <section id="libraryTab" class="tab-panel">
+      <div class="section-heading"><div><small>ULOŽENÉ STRÁNKY</small></div><button id="newSite" class="add">＋</button></div>
+      <div id="sitesList" class="library-list"></div>
+      <div class="section-heading credentials-heading"><div><small>PŘIHLAŠOVACÍ PROFILY</small></div><div class="heading-actions"><details class="tools-menu" id="credentialTools"><summary title="Záloha přihlašovacích profilů" aria-label="Záloha přihlašovacích profilů">⚙</summary><div class="tools-menu-popover"><button id="importCredentials">Importovat profily</button><button id="exportCredentials">Exportovat profily</button></div><input id="credentialImportFile" type="file" accept=".json,.automat.json,application/json" hidden></details><button id="newCredential" class="add" title="Nový přihlašovací profil">＋</button></div></div>
+      <div id="credentialsList" class="library-list"></div>
+    </section>
+    <div class="sidebar-footer"><span id="browserDot" class="dot offline"></span><span id="browserLabel">Prohlížeč není spuštěn</span><button id="quitBrowser">Ukončit</button></div>
+  </aside>
+
+  <main class="workspace" id="workspace">
+    <section class="hero-card">
+      <div class="hero-copy"><span class="eyebrow">ŘÍZENÝ PROHLÍŽEČ</span><h1 id="pageTitle">Připraven tvořit automatizaci</h1><p id="pageUrl">Spusťte Chrome a přejděte na cílovou stránku.</p></div>
+      <div class="hero-actions"><button class="primary" id="startBrowser">Spustit Chrome</button></div>
+    </section>
+
+    <div class="content-grid">
+      <section class="panel elements-panel">
+        <div class="panel-header"><div><span class="eyebrow">ELEMENTY</span><h2>Uložené objekty</h2></div><div class="panel-header-actions"><details class="tools-menu"><summary title="Záloha objektů" aria-label="Záloha objektů">⚙</summary><div class="tools-menu-popover right"><button id="importElements">Importovat objekty</button><button id="exportElements">Exportovat objekty</button></div><input id="elementImportFile" type="file" accept=".json,.automat.json,application/json" hidden></details><button class="find-button" id="findElement"><span>⌖</span> Najít objekt</button></div></div>
+        <div class="filter-row"><input id="elementSearch" placeholder="Hledat podle názvu nebo lokátoru"><select id="siteFilter"><option value="">Všechny stránky</option></select></div>
+        <div id="elementsGrid" class="elements-grid empty-state"><p>Žádné uložené objekty</p><span>Spusťte prohlížeč a použijte „Najít objekt“.</span></div>
+      </section>
+      <section class="panel activity-panel">
+        <div class="panel-header"><div><span class="eyebrow">PRŮBĚH</span><h2>Živý záznam</h2></div><span id="progressCount" class="counter">0 / 0</span></div>
+        <div id="currentAction" class="current-action"><span class="pulse"></span><div><strong>Čekám na spuštění</strong><small>Vyberte workflow v levém panelu.</small></div></div>
+        <div id="logList" class="log-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast-stack" id="toasts"></div>
+  <div class="action-context-menu" id="actionContextMenu" hidden><button id="contextCopyActions">Kopírovat <kbd>Ctrl+C</kbd></button><button id="contextPasteBefore">Vložit před tuto akci</button><button id="contextPasteAfter">Vložit za tuto akci</button></div>
+
+  <dialog id="elementDialog">
+    <form method="dialog" id="elementForm"><div class="modal-head"><div><span class="eyebrow" id="elementDialogEyebrow">NOVÝ ELEMENT</span><h2 id="elementDialogTitle">Uložit nalezený objekt</h2></div><button type="button" data-close-dialog class="close" aria-label="Zavřít">×</button></div>
+      <div id="selectionPreview" class="selection-preview"><div class="preview-placeholder">Náhled vznikne po uložení</div><div><strong id="selectionTag">element</strong><span id="selectionText"></span></div></div>
+      <label>Název objektu<input name="name" required placeholder="Např. Tlačítko Přihlásit"></label>
+      <div class="form-row"><label>Strategie<select name="strategy">{% for item in locator_strategies %}<option>{{ item }}</option>{% endfor %}</select></label><label>Stránka<select name="site_id" id="elementSite"><option value="">Bez stránky</option></select></label></div>
+      <label>Hodnota lokátoru<textarea name="locator" required rows="2"></textarea></label>
+      <label>Podobjekt (volitelné)<select name="parent_id" id="parentElement"><option value="">Žádný nadřazený objekt</option></select></label>
+      <div class="modal-actions"><button type="button" data-close-dialog class="secondary">Zrušit</button><button type="submit" value="default" class="primary" id="elementSubmitButton">Uložit objekt</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="actionDialog">
+    <form method="dialog" id="actionForm"><div class="modal-head"><div><span class="eyebrow" id="actionDialogEyebrow">NOVÝ KROK</span><h2 id="actionDialogTitle">Přidat akci</h2></div><button type="button" data-close-dialog class="close" aria-label="Zavřít">×</button></div>
+      <label>Typ akce<select name="action_type" id="actionType">{% for key,label in action_types.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+      <label id="actionElementWrap">Objekt<select name="element_id" id="actionElement"><option value="">Vyberte objekt</option></select></label>
+      <div id="parameterFields" class="parameter-fields"></div>
+      <div class="modal-actions"><button type="button" data-close-dialog class="secondary">Zrušit</button><button type="submit" value="default" class="primary" id="actionSubmitButton">Přidat do seznamu</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="simpleDialog"><form method="dialog" id="simpleForm"><div class="modal-head"><div><span class="eyebrow" id="simpleEyebrow">NOVÁ POLOŽKA</span><h2 id="simpleTitle">Vytvořit</h2></div><button type="button" data-close-dialog class="close" aria-label="Zavřít">×</button></div><div id="simpleFields"></div><div class="modal-actions"><button type="button" data-close-dialog class="secondary">Zrušit</button><button type="submit" value="default" class="primary">Uložit</button></div></form></dialog>
+  <dialog id="credentialDialog"><form method="dialog" id="credentialForm"><div class="modal-head"><div><span class="eyebrow" id="credentialDialogEyebrow">ŠIFROVANÉ ÚDAJE</span><h2 id="credentialDialogTitle">Nový přihlašovací profil</h2></div><button type="button" data-close-dialog class="close" aria-label="Zavřít">×</button></div>
+    <label>Název profilu<input name="name" required placeholder="Např. Můj účet"></label>
+    <label>Stránka<select name="site_id" id="credentialSite"><option value="">Bez stránky</option></select></label>
+    <div class="form-row"><label>Objekt uživatelského jména<select name="username_element_id" id="credentialUsernameElement" required></select></label><label>Objekt hesla<select name="password_element_id" id="credentialPasswordElement" required></select></label></div>
+    <div class="form-row"><label>Uživatelské jméno<input name="username" id="credentialUsernameValue" required autocomplete="off"></label><label>Heslo<input name="password" id="credentialPasswordValue" type="password" required autocomplete="new-password"></label></div>
+    <div class="credential-extra-head"><strong>Dodatečné kroky</strong><button type="button" id="addCredentialAction" class="secondary">Přidat krok</button></div>
+    <div id="credentialExtraActions" class="credential-extra-actions"></div>
+    <label>Přihlašovací tlačítko (volitelné)<select name="submit_element_id" id="credentialSubmitElement"><option value="">Pouze vyplnit údaje</option></select></label>
+    <p class="security-note">Hodnoty jsou šifrované pomocí Windows DPAPI a v rozhraní se znovu nezobrazují.</p>
+    <div class="modal-actions"><button type="button" data-close-dialog class="secondary">Zrušit</button><button type="submit" value="default" class="primary" id="credentialSubmitButton">Uložit profil</button></div>
+  </form></dialog>
+  <dialog id="settingsDialog"><form method="dialog" id="settingsForm"><div class="modal-head"><div><span class="eyebrow">NASTAVENÍ</span><h2>Možnosti Automatu</h2></div><button type="button" data-close-dialog class="close" aria-label="Zavřít">×</button></div>
+    <label class="settings-toggle"><input id="autorunEnabled" type="checkbox"> <span><strong>Autorun</strong><small>Po startu serveru nebo po zavření řízeného Chrome otevře první uloženou stránku, zkusí přihlášení a spustí první workflow v nekonečném loopu.</small></span></label>
+    <p id="autorunStatus" class="settings-status" hidden>Autorun je zapnutý a bude hlídat spuštění Automatu.</p>
+    <label class="settings-toggle"><input id="stealthRunEnabled" type="checkbox"> <span><strong>Stealth run</strong><small>Nově spuštěný řízený Chrome poběží na pozadí v headless režimu bez viditelného okna. Projeví se při dalším spuštění Chrome.</small></span></label>
+    <p id="stealthRunStatus" class="settings-status" hidden>Stealth run je zapnutý. Další Selenium relace poběží bez otevřeného okna Chrome.</p>
+    <p class="security-note">Autorun použije pouze uložené objekty a přihlašovací profil, u kterého na stránce najde alespoň jeden nastavený objekt.</p>
+    <div class="modal-actions"><button type="button" data-close-dialog class="primary">Hotovo</button></div>
+  </form></dialog>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

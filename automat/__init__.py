@@ -1,0 +1,1 @@
+"""Automat browser automation studio."""
