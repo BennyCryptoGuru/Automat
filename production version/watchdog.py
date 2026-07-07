@@ -75,10 +75,10 @@ def main():
     handle = acquire_single_instance()
     if handle is None:
         return
-    log("Watchdog bezi. Program spusti jen pri zapnutem Autorun.")
+    log("Watchdog is running. It starts the program only when Autorun is enabled.")
     while True:
         if autorun_enabled() and not server_alive():
-            log("Autorun je zapnuty a server nebezi. Spoustim Automat.")
+            log("Autorun is enabled and the server is not running. Starting Automat.")
             start_server()
             time.sleep(15)
         time.sleep(5)

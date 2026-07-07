@@ -2,16 +2,16 @@
 setlocal
 cd /d "%~dp0"
 
-echo Spoustim instalaci Automatu...
+echo Starting Automat installation...
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"
 if errorlevel 1 (
   echo.
-  echo Instalace selhala. Podrobnosti jsou uvedeny vyse.
+  echo Installation failed. Details are shown above.
   pause
   exit /b 1
 )
 
 echo.
-echo Instalace byla dokoncena.
-echo Automat spustite souborem start.bat
+echo Installation completed.
+echo Start Automat with start.bat
 pause

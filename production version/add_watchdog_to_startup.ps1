@@ -3,12 +3,12 @@ $ErrorActionPreference = "Stop"
 $root = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $launcher = Join-Path $root "watchdog_hidden.vbs"
 if (-not (Test-Path -LiteralPath $launcher)) {
-    throw "Nenalezen launcher watchdogu: $launcher"
+    throw "Watchdog launcher was not found: $launcher"
 }
 
 $startup = [Environment]::GetFolderPath("Startup")
 if ([string]::IsNullOrWhiteSpace($startup)) {
-    throw "Nepodarilo se zjistit slozku Po spusteni pro aktualniho uzivatele."
+    throw "Could not determine the Startup folder for the current user."
 }
 
 $shortcutPath = Join-Path $startup "Automat Watchdog.lnk"
@@ -21,7 +21,7 @@ $shortcut.WindowStyle = 7
 $shortcut.Description = "Automat Watchdog - starts production Automat only when Autorun is enabled"
 $shortcut.Save()
 
-Write-Host "Zastupce vytvoren:" -ForegroundColor Green
+Write-Host "Shortcut created:" -ForegroundColor Green
 Write-Host $shortcutPath
 Write-Host ""
-Write-Host "Watchdog muze bezet porad, ale Automat spusti jen pokud je v nastaveni zapnuty Autorun."
+Write-Host "The watchdog can keep running, but it starts Automat only when Autorun is enabled in settings."

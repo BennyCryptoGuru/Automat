@@ -18,7 +18,7 @@ function Remove-DirectoryInside([string]$Root, [string]$Path) {
     $rootPath = (Resolve-Path -LiteralPath $Root).Path
     $resolved = (Resolve-Path -LiteralPath $Path).Path
     if (-not $resolved.StartsWith($rootPath, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "Odmitam smazat cestu mimo cilovou slozku: $resolved"
+        throw "Refusing to delete a path outside the target folder: $resolved"
     }
     Remove-Item -LiteralPath $resolved -Recurse -Force
 }
@@ -46,15 +46,15 @@ function Get-AutomatProcessIds {
 function Stop-AutomatIfRunning {
     $ids = @(Get-AutomatProcessIds)
     if (-not $ids.Count) {
-        Write-Host "Automat prave nebezi."
+        Write-Host "Automat is not running."
         return
     }
     foreach ($id in $ids) {
         try {
-            Write-Host "Ukoncuji bezici Automat PID $id"
+            Write-Host "Stopping running Automat PID $id"
             Stop-Process -Id $id -Force -ErrorAction Stop
         } catch {
-            Write-Warning "Proces PID $id se nepodarilo ukoncit pres Stop-Process: $($_.Exception.Message)"
+            Write-Warning "Could not stop process PID $id with Stop-Process: $($_.Exception.Message)"
             & taskkill.exe /PID $id /F /T | Out-Null
         }
     }
@@ -64,50 +64,50 @@ function Stop-AutomatIfRunning {
         $stillListening = @(Get-NetTCPConnection -State Listen -LocalPort 5000 -ErrorAction SilentlyContinue)
     } while ($stillListening.Count -and (Get-Date) -lt $deadline)
     if ($stillListening.Count) {
-        throw "Port 5000 je stale obsazeny. Zavrete Automat rucne a spustte aktualizaci znovu."
+        throw "Port 5000 is still in use. Close Automat manually and run the update again."
     }
 }
 
 function Start-AutomatHidden {
     $launcher = Join-Path $TargetPath "start_hidden.vbs"
     if (-not (Test-Path -LiteralPath $launcher)) {
-        Write-Warning "Skryty launcher nebyl nalezen: $launcher"
+        Write-Warning "Hidden launcher was not found: $launcher"
         return
     }
-    Write-Step "Spoustim Automat skryte"
+    Write-Step "Starting Automat hidden"
     Start-Process -FilePath "wscript.exe" -ArgumentList @("`"$launcher`"") -WorkingDirectory $TargetPath -WindowStyle Hidden
 }
 
-Write-Host "Automat - aktualizace" -ForegroundColor Magenta
-Write-Host "Zdroj: $SourcePath"
-Write-Host "Cil:   $TargetPath"
+Write-Host "Automat - update" -ForegroundColor Magenta
+Write-Host "Source: $SourcePath"
+Write-Host "Target: $TargetPath"
 
 New-Item -ItemType Directory -Force -Path $TargetPath | Out-Null
 
-Write-Step "Zastavuji bezici Automat"
+Write-Step "Stopping running Automat"
 Stop-AutomatIfRunning
 
 if (-not ([string]::Equals($SourcePath, $TargetPath, [System.StringComparison]::OrdinalIgnoreCase))) {
-    Write-Step "Kopiruji soubory programu"
+    Write-Step "Copying program files"
     $itemsToCopy = @(
         "automat",
         "install.bat",
         "install.ps1",
-        "aktualizovat.bat",
-        "aktualizovat.ps1",
+        "update.bat",
+        "update.ps1",
         "requirements.txt",
         "run.py",
         "watchdog.py",
         "watchdog_hidden.ps1",
         "watchdog_hidden.vbs",
-        "pridat_watchdog_po_prihlaseni.bat",
-        "pridat_watchdog_po_prihlaseni.ps1",
-        "odebrat_watchdog_po_prihlaseni.bat",
+        "add_watchdog_to_startup.bat",
+        "add_watchdog_to_startup.ps1",
+        "remove_watchdog_from_startup.bat",
         "start.bat",
         "start_hidden.ps1",
         "start_hidden.vbs",
         "README.md",
-        "NAVOD_WATCHDOG_AUTORUN.txt",
+        "WATCHDOG_AUTORUN_GUIDE.txt",
         ".gitignore"
     )
     foreach ($item in $itemsToCopy) {
@@ -116,21 +116,21 @@ if (-not ([string]::Equals($SourcePath, $TargetPath, [System.StringComparison]::
         $target = Join-Path $TargetPath $item
         if ((Get-Item -LiteralPath $source).PSIsContainer) {
             & robocopy $source $target /MIR /XD "__pycache__" ".pytest_cache" /XF "*.pyc" /NFL /NDL /NJH /NJS /NP | Out-Null
-            if ($LASTEXITCODE -gt 7) { throw "Kopirovani slozky $item selhalo (robocopy $LASTEXITCODE)." }
+            if ($LASTEXITCODE -gt 7) { throw "Copying folder $item failed (robocopy $LASTEXITCODE)." }
         } else {
             Copy-Item -LiteralPath $source -Destination $target -Force
         }
     }
 }
 
-Write-Step "Cistim stare docasne soubory"
+Write-Step "Cleaning old temporary files"
 Remove-DirectoryInside $TargetPath (Join-Path $TargetPath "__pycache__")
 Remove-DirectoryInside $TargetPath (Join-Path $TargetPath ".pytest_cache")
 
-Write-Step "Overuji zavislosti"
+Write-Step "Checking dependencies"
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $TargetPath "install.ps1")
-if ($LASTEXITCODE -ne 0) { throw "Instalace nebo aktualizace zavislosti selhala." }
+if ($LASTEXITCODE -ne 0) { throw "Dependency installation or update failed." }
 
-Write-Host "`nAktualizace je hotova." -ForegroundColor Green
-Write-Host "Databaze a screenshoty v data zustaly zachovane."
+Write-Host "`nUpdate is complete." -ForegroundColor Green
+Write-Host "The database and screenshots in data were preserved."
 Start-AutomatHidden

@@ -31,7 +31,7 @@ def acquire_single_instance():
     handle = ctypes.windll.kernel32.CreateMutexW(None, False, "Local\\AutomatBrowserStudio")
     if not handle or ctypes.windll.kernel32.GetLastError() == 183:
         webbrowser.open(APP_URL)
-        print(f"Automat uz bezi. Oteviram existujici instanci: {APP_URL}")
+        print(f"Automat is already running. Opening the existing instance: {APP_URL}")
         return None
     return handle
 
@@ -61,5 +61,5 @@ if __name__ == "__main__":
     app = create_app({"ENABLE_AUTORUN_MONITOR": True})
     if not setting_enabled("stealth_run"):
         Timer(1.0, lambda: webbrowser.open(APP_URL)).start()
-    print(f"Automat ({APP_LABEL}) bezi na {APP_URL}")
+    print(f"Automat ({APP_LABEL}) is running at {APP_URL}")
     serve(app, host="127.0.0.1", port=5000, threads=8)

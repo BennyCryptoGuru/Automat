@@ -3,12 +3,12 @@ setlocal
 cd /d "%~dp0"
 
 if not exist ".venv\Scripts\python.exe" (
-  echo Automat zatim neni nainstalovany.
-  echo Spoustim instalaci...
+  echo Automat is not installed yet.
+  echo Starting installation...
   call install.bat
   if errorlevel 1 (
     echo.
-    echo Instalace selhala. Automat nelze spustit.
+    echo Installation failed. Automat cannot be started.
     pause
     exit /b 1
   )

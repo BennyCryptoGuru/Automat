@@ -32,7 +32,7 @@ How to start the watchdog automatically after Windows login
 The easiest way:
 
 1. In the production build folder, run:
-   pridat_watchdog_po_prihlaseni.bat
+   add_watchdog_to_startup.bat
 
 2. The script creates a shortcut named:
    Automat Watchdog.lnk
@@ -49,7 +49,7 @@ The easiest way:
 How to remove watchdog autostart
 --------------------------------
 Run:
-odebrat_watchdog_po_prihlaseni.bat
+remove_watchdog_from_startup.bat
 
 This removes the shortcut from the Startup folder.
 
@@ -64,7 +64,7 @@ If you want to do it manually:
 3. In the opened folder, create a shortcut to:
    watchdog_hidden.vbs
 
-Using the prepared script `pridat_watchdog_po_prihlaseni.bat` is easier.
+Using the prepared script `add_watchdog_to_startup.bat` is easier.
 
 
 Important behavior
@@ -84,4 +84,4 @@ data\watchdog.log
 data\watchdog-start.log
 
 The Automat server writes its log here:
-datautomat-server.log
+data\automat-server.log

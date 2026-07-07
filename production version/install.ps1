@@ -30,12 +30,12 @@ function Get-PythonExecutable {
 
 function Install-WithWinget([string]$Id, [string]$Name) {
     if (-not (Get-Command winget.exe -ErrorAction SilentlyContinue)) {
-        throw "Chybi Windows Package Manager (winget). Nainstalujte App Installer z Microsoft Store a spustte install.bat znovu."
+        throw "Windows Package Manager (winget) is missing. Install App Installer from Microsoft Store and run install.bat again."
     }
-    Write-Step "Instaluji $Name"
+    Write-Step "Installing $Name"
     & winget.exe install --id $Id --exact --source winget --accept-package-agreements --accept-source-agreements --silent
     if ($LASTEXITCODE -ne 0) {
-        throw "Instalace balicku $Name pres winget selhala (kod $LASTEXITCODE)."
+        throw "Installing package $Name with winget failed (code $LASTEXITCODE)."
     }
 }
 
@@ -47,9 +47,9 @@ function Remove-VenvSafely {
     }
     $resolved = (Resolve-Path -LiteralPath $venv).Path
     if (-not $resolved.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "Odmitam smazat .venv mimo slozku Automatu: $resolved"
+        throw "Refusing to delete .venv outside the Automat folder: $resolved"
     }
-    Write-Step "Odstranuji prenosene nebo poskozene prostredi .venv"
+    Write-Step "Removing transferred or damaged .venv environment"
     Remove-Item -LiteralPath $resolved -Recurse -Force
 }
 
@@ -68,8 +68,8 @@ function Test-VenvUsable {
     }
 }
 
-Write-Host "Automat - instalace zavislosti" -ForegroundColor Magenta
-Write-Host "Slozka: $PSScriptRoot"
+Write-Host "Automat - dependency installation" -ForegroundColor Magenta
+Write-Host "Folder: $PSScriptRoot"
 
 $python = Get-PythonExecutable
 if (-not $python) {
@@ -82,13 +82,13 @@ if (-not $python) {
     }
 }
 if (-not $python) {
-    throw "Python se nepodarilo najit ani po instalaci. Restartujte Windows a spustte install.bat znovu."
+    throw "Python could not be found even after installation. Restart Windows and run install.bat again."
 }
 
 $versionText = & $python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
 $versionParts = $versionText.Split(".")
 if ([int]$versionParts[0] -lt 3 -or ([int]$versionParts[0] -eq 3 -and [int]$versionParts[1] -lt 10)) {
-    throw "Automat vyzaduje Python 3.10 nebo novejsi. Nalezeno: $versionText"
+    throw "Automat requires Python 3.10 or newer. Found: $versionText"
 }
 Write-Host "Python: $python ($versionText)" -ForegroundColor Green
 
@@ -97,26 +97,26 @@ if ((Test-Path -LiteralPath ".venv") -and -not (Test-VenvUsable)) {
 }
 
 if (-not (Test-Path -LiteralPath ".venv\Scripts\python.exe")) {
-    Write-Step "Vytvarim izolovane Python prostredi .venv"
+    Write-Step "Creating isolated Python environment .venv"
     & $python -m venv .venv
-    if ($LASTEXITCODE -ne 0) { throw "Vytvoreni .venv selhalo." }
+    if ($LASTEXITCODE -ne 0) { throw "Creating .venv failed." }
 }
 
 $venvPython = (Resolve-Path ".venv\Scripts\python.exe").Path
 & $venvPython -m pip --version *> $null
 if ($LASTEXITCODE -ne 0) {
-    Write-Step "Doplnuji pip do prostredi .venv"
+    Write-Step "Adding pip to .venv"
     & $venvPython -m ensurepip --upgrade
-    if ($LASTEXITCODE -ne 0) { throw "Instalace pip pres ensurepip selhala." }
+    if ($LASTEXITCODE -ne 0) { throw "Installing pip through ensurepip failed." }
 }
 
-Write-Step "Aktualizuji pip"
+Write-Step "Updating pip"
 & $venvPython -m pip install --upgrade pip setuptools wheel
-if ($LASTEXITCODE -ne 0) { throw "Aktualizace pip selhala." }
+if ($LASTEXITCODE -ne 0) { throw "Updating pip failed." }
 
-Write-Step "Instaluji Python zavislosti"
+Write-Step "Installing Python dependencies"
 & $venvPython -m pip install -r requirements.txt
-if ($LASTEXITCODE -ne 0) { throw "Instalace requirements.txt selhala." }
+if ($LASTEXITCODE -ne 0) { throw "Installing requirements.txt failed." }
 
 $browserPaths = @(
     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
@@ -129,15 +129,15 @@ if (-not $browser) {
     $browser = $browserPaths | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
 }
 if (-not $browser) {
-    throw "Google Chrome nebyl nalezen. Nainstalujte Chrome a spustte install.bat znovu."
+    throw "Google Chrome was not found. Install Chrome and run install.bat again."
 }
 Write-Host "Chrome: $browser" -ForegroundColor Green
 
 New-Item -ItemType Directory -Force -Path "data", "data\screenshots" | Out-Null
 
-Write-Step "Overuji instalaci"
-& $venvPython -c "import flask, selenium, PIL, waitress; print('Python zavislosti jsou v poradku.')"
-if ($LASTEXITCODE -ne 0) { throw "Kontrola Python zavislosti selhala." }
+Write-Step "Verifying installation"
+& $venvPython -c "import flask, selenium, PIL, waitress; print('Python dependencies are OK.')"
+if ($LASTEXITCODE -ne 0) { throw "Python dependency check failed." }
 
-Write-Host "`nInstalace Automatu byla uspesne dokoncena." -ForegroundColor Green
-Write-Host "Selenium Manager stahne kompatibilni ChromeDriver automaticky pri prvnim spusteni prohlizece."
+Write-Host "`nAutomat installation completed successfully." -ForegroundColor Green
+Write-Host "Selenium Manager downloads a compatible ChromeDriver automatically on the first browser start."
