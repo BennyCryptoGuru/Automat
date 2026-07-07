@@ -93,6 +93,8 @@ if (-not ([string]::Equals($SourcePath, $TargetPath, [System.StringComparison]::
         "automat",
         "install.bat",
         "install.ps1",
+        "disable_stealth_run.bat",
+        "disable_stealth_run.ps1",
         "update.bat",
         "update.ps1",
         "requirements.txt",

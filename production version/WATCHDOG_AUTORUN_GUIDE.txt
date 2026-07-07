@@ -54,6 +54,14 @@ remove_watchdog_from_startup.bat
 This removes the shortcut from the Startup folder.
 
 
+How to turn Stealth run off without the UI
+-----------------------------------------
+If Automat starts in the background because Stealth run is enabled, run:
+disable_stealth_run.bat
+
+The script writes `stealth_run=false` to the local SQLite settings, closes the controlled browser when possible, stops the server, and starts Automat again. Because Stealth run is disabled before restart, the Automat UI opens visibly.
+
+
 Manual Windows setup
 --------------------
 If you want to do it manually:

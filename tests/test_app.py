@@ -107,6 +107,23 @@ def test_language_switcher_is_available(client):
     assert ".language-switch" in stylesheet
 
 
+def test_production_stealth_recovery_helper_is_available():
+    root = Path(__file__).resolve().parents[1]
+    script = root / "production version" / "disable_stealth_run.ps1"
+    batch = root / "production version" / "disable_stealth_run.bat"
+    wrapper = root / "disable_stealth_run.bat"
+
+    assert script.exists()
+    assert batch.exists()
+    assert wrapper.exists()
+    text = script.read_text(encoding="utf-8")
+    assert "stealth_run" in text
+    assert "json.dumps(False)" in text
+    assert "/api/browser/quit" in text
+    assert "start_hidden.vbs" in text
+    assert "disable_stealth_run.bat" in (root / "production version" / "update.ps1").read_text(encoding="utf-8")
+
+
 def test_runner_controls_are_enabled_only_for_valid_state(client):
     html = client.get("/").get_data(as_text=True)
     javascript = client.get("/static/app.js").get_data(as_text=True)
