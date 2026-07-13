@@ -61,6 +61,9 @@ disable_stealth_run.bat
 
 The script writes `stealth_run=false` to the local SQLite settings, closes the controlled browser when possible, stops the server, and starts Automat again. Because Stealth run is disabled before restart, the Automat UI opens visibly.
 
+While Stealth run is enabled, you can open the lightweight monitor at:
+http://127.0.0.1:5000/monitor
+
 
 Manual Windows setup
 --------------------

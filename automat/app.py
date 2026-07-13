@@ -95,6 +95,82 @@ def create_app(test_config=None):
     def index():
         return render_template("index.html", locator_strategies=list(BY_MAP), action_types=ACTION_TYPES)
 
+    @app.get("/monitor")
+    def monitor():
+        return render_template("monitor.html")
+
+    def monitor_action_item(action, active=False):
+        parameters = action.get("parameters") or {}
+        details = []
+        if action.get("element_name"):
+            details.append(action["element_name"])
+        for value in parameters.values():
+            if isinstance(value, (dict, list)) or value in (None, ""):
+                continue
+            details.append(str(value))
+            if len(details) >= 3:
+                break
+        return {
+            "id": action["id"],
+            "position": action["position"],
+            "type": action["action_type"],
+            "label": ACTION_TYPES.get(action["action_type"], action["action_type"]),
+            "details": " · ".join(details),
+            "active": active,
+        }
+
+    def monitor_action_window(runner_state):
+        workflow_id = runner_state.get("workflow_id")
+        current = runner_state.get("current")
+        if not workflow_id:
+            return {"workflow": None, "previous": [], "current": None, "next": []}
+        workflow = db.one("SELECT id,name FROM workflows WHERE id=?", (workflow_id,))
+        actions = db.all(
+            "SELECT a.*, e.name AS element_name FROM actions a "
+            "LEFT JOIN elements e ON e.id=a.element_id "
+            "WHERE a.workflow_id=? AND a.enabled=1 ORDER BY a.position,a.id",
+            (workflow_id,),
+        )
+        if not actions:
+            return {"workflow": workflow, "previous": [], "current": None, "next": []}
+        current_index = current.get("index") if current else None
+        if current_index is None or current_index < 0 or current_index >= len(actions):
+            return {"workflow": workflow, "previous": [], "current": None, "next": [monitor_action_item(item) for item in actions[:2]]}
+        repeat_forever = runner_state.get("repeat_count") == 0
+
+        def pick(offsets):
+            picked = []
+            for offset in offsets:
+                index = current_index + offset
+                if repeat_forever:
+                    index %= len(actions)
+                if 0 <= index < len(actions) and index != current_index:
+                    picked.append(monitor_action_item(actions[index]))
+            return picked
+
+        return {
+            "workflow": workflow,
+            "previous": pick([-2, -1]),
+            "current": monitor_action_item(actions[current_index], True),
+            "next": pick([1, 2]),
+        }
+
+    @app.get("/api/monitor/status")
+    def monitor_status():
+        runner_state = runner.snapshot()
+        browser_state = browser.status()
+        settings = settings_payload()
+        action_window = monitor_action_window(runner_state)
+        return ok({
+            "online": True,
+            "background": bool(settings.get("stealth_run") or browser_state.get("stealth_run")),
+            "settings": settings,
+            "browser": browser_state,
+            "runner": runner_state,
+            "logs": list(runner_state.get("logs", []))[-2:],
+            "actions": action_window,
+        })
+
     @app.get("/api/bootstrap")
     def bootstrap():
         return ok({

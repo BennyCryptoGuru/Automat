@@ -107,6 +107,55 @@ def test_language_switcher_is_available(client):
     assert ".language-switch" in stylesheet
 
 
+def test_stealth_monitor_page_is_self_contained(client):
+    html = client.get("/monitor").get_data(as_text=True)
+
+    assert "Automat Monitor" in html
+    assert "<style>" in html
+    assert "<script>" in html
+    assert "/api/monitor/status" in html
+    assert 'rel="stylesheet"' not in html
+    assert 'src="' not in html
+
+
+def test_monitor_status_returns_logs_and_action_window(client):
+    site = client.post("/api/sites", json={"name": "Monitor", "url": "https://example.test"}).get_json()["data"]
+    element = client.post("/api/elements", json={
+        "site_id": site["id"], "name": "Button", "strategy": "id", "locator": "button",
+        "capture_preview": False,
+    }).get_json()["data"]
+    workflow = client.post("/api/workflows", json={"site_id": site["id"], "name": "Monitor flow"}).get_json()["data"]
+    for action_type in ["click", "wait", "refresh", "back"]:
+        client.post(f"/api/workflows/{workflow['id']}/actions", json={
+            "action_type": action_type,
+            "element_id": element["id"] if action_type == "click" else None,
+            "parameters": {"seconds": 1} if action_type == "wait" else {},
+        })
+    runner = client.application.extensions["automat_runner"]
+    with runner.lock:
+        runner.state.update({
+            "status": "running",
+            "workflow_id": workflow["id"],
+            "current": {"index": 1, "total": 4, "cycle": 1, "action_id": 2, "type": "wait"},
+            "repeat_count": 1,
+            "message": "2/4 · wait",
+            "logs": [
+                {"time": "10:00:00", "level": "info", "message": "old"},
+                {"time": "10:00:01", "level": "info", "message": "current"},
+                {"time": "10:00:02", "level": "success", "message": "next"},
+            ],
+        })
+
+    data = client.get("/api/monitor/status").get_json()["data"]
+
+    assert data["online"] is True
+    assert data["actions"]["workflow"]["name"] == "Monitor flow"
+    assert [item["label"] for item in data["actions"]["previous"]] == ["Click"]
+    assert data["actions"]["current"]["label"] == "Wait"
+    assert [item["label"] for item in data["actions"]["next"]] == ["Refresh", "Back"]
+    assert [log["message"] for log in data["logs"]] == ["current", "next"]
+
+
 def test_production_stealth_recovery_helper_is_available():
     root = Path(__file__).resolve().parents[1]
     script = root / "production version" / "disable_stealth_run.ps1"

@@ -44,6 +44,7 @@ Automat does not pass a custom `--user-data-dir` to Chrome and does not use brow
 - Navigation, history, refresh, tabs/windows, iframes, dialogs, upload, cookies, screenshots, and JavaScript execution.
 - Context PNG previews for saved elements: the object is centered and cropped with a dynamic margin into a suitable square or rectangle.
 - Frontend language switcher: English is the default UI language and Czech is available as a separate option.
+- Lightweight stealth monitor at `http://127.0.0.1:5000/monitor`, built as a single self-contained HTML page with inline CSS/JS. It shows online/offline state, background mode, the last two log entries, and nearby workflow actions.
 
 ## Security Notes
 

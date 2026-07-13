@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Automat Monitor</title>
+  <style>
+    :root { color-scheme: dark; --bg:#111721; --card:#182232; --muted:#93a1b5; --line:#263349; --ok:#21d19f; --bad:#ff5f76; --warn:#f4b860; --text:#eef4ff; font-family: Inter, "Segoe UI", Arial, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top left, #24324a, var(--bg) 38rem); color: var(--text); padding: 18px; }
+    main { width: min(860px, 100%); margin: 0 auto; display: grid; gap: 12px; }
+    header, section { background: rgba(24, 34, 50, .92); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 18px 50px rgba(0,0,0,.22); }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 16px 18px; }
+    h1 { margin: 0; font-size: 21px; letter-spacing: .01em; }
+    h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .13em; color: var(--muted); }
+    section { padding: 16px; }
+    .status { display: flex; align-items: center; gap: 8px; padding: 8px 11px; border-radius: 999px; background: #0d141f; color: var(--muted); font-weight: 800; font-size: 12px; white-space: nowrap; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 5px rgba(255,95,118,.12); }
+    .online .dot { background: var(--ok); box-shadow: 0 0 0 5px rgba(33,209,159,.13), 0 0 14px rgba(33,209,159,.65); animation: pulse 1.25s ease-in-out infinite; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .tile { background: #101824; border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-height: 82px; }
+    .label { color: var(--muted); font-size: 11px; margin-bottom: 7px; }
+    .value { font-size: 17px; font-weight: 800; overflow-wrap: anywhere; }
+    .sub { color: var(--muted); font-size: 12px; margin-top: 4px; overflow-wrap: anywhere; }
+    .actions { display: grid; gap: 8px; }
+    .action { display: grid; grid-template-columns: 70px 1fr; gap: 10px; align-items: start; padding: 10px 11px; border: 1px solid var(--line); border-radius: 11px; background: #101824; }
+    .action.current { border-color: rgba(33,209,159,.72); box-shadow: inset 3px 0 0 var(--ok); }
+    .tag { color: var(--muted); font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+    .action strong { display:block; font-size: 13px; }
+    .action small { display:block; margin-top: 3px; color: var(--muted); font-size: 11px; overflow-wrap:anywhere; }
+    .logs { display: grid; gap: 8px; }
+    .log { display: grid; grid-template-columns: 64px 70px 1fr; gap: 8px; padding: 9px 10px; border-radius: 10px; background: #101824; border: 1px solid var(--line); font-size: 12px; }
+    .level { color: var(--warn); font-weight: 800; text-transform: uppercase; }
+    .empty { color: var(--muted); font-size: 12px; padding: 10px; border: 1px dashed var(--line); border-radius: 10px; }
+    footer { color: var(--muted); text-align: center; font-size: 11px; padding: 6px; }
+    @keyframes pulse { 0%,100% { transform: scale(.88); } 50% { transform: scale(1.15); } }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } header { align-items:flex-start; flex-direction:column; } .log { grid-template-columns: 52px 60px 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Automat Monitor</h1>
+        <div class="sub" id="updated">Waiting for status...</div>
+      </div>
+      <div class="status" id="onlinePill"><span class="dot"></span><span>OFFLINE</span></div>
+    </header>
+
+    <section>
+      <h2>Status</h2>
+      <div class="grid">
+        <div class="tile"><div class="label">Run mode</div><div class="value" id="mode">Unknown</div><div class="sub" id="modeDetail"></div></div>
+        <div class="tile"><div class="label">Workflow</div><div class="value" id="workflow">None</div><div class="sub" id="runnerStatus"></div></div>
+        <div class="tile"><div class="label">Browser</div><div class="value" id="browser">Not running</div><div class="sub" id="browserUrl"></div></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Action Window</h2>
+      <div class="actions" id="actions"></div>
+    </section>
+
+    <section>
+      <h2>Last Log Entries</h2>
+      <div class="logs" id="logs"></div>
+    </section>
+
+    <footer>Refreshes automatically every 1.5 seconds.</footer>
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[char]));
+    function setOnline(online) {
+      const pill = $("onlinePill");
+      pill.classList.toggle("online", online);
+      pill.querySelector("span:last-child").textContent = online ? "ONLINE" : "OFFLINE";
+    }
+    function actionHtml(kind, item) {
+      if (!item) return "";
+      return `<div class="action ${kind === "Current" ? "current" : ""}">
+        <div class="tag">${kind}</div>
+        <div><strong>#${item.position} ${esc(item.label)}</strong><small>${esc(item.details || item.type)}</small></div>
+      </div>`;
+    }
+    function render(data) {
+      setOnline(true);
+      $("updated").textContent = `Last update: ${new Date().toLocaleTimeString()}`;
+      $("mode").textContent = data.background ? "Background" : "Visible";
+      $("modeDetail").textContent = data.settings?.stealth_run ? "Stealth run is enabled" : "Stealth run is disabled";
+      $("workflow").textContent = data.actions?.workflow?.name || "None";
+      $("runnerStatus").textContent = `${data.runner?.status || "unknown"} · ${data.runner?.message || ""}`;
+      $("browser").textContent = data.browser?.running ? `${data.browser.browser || "Chrome"} running` : "Not running";
+      $("browserUrl").textContent = data.browser?.url || "";
+      const previous = (data.actions?.previous || []).map(item => actionHtml("Previous", item)).join("");
+      const current = actionHtml("Current", data.actions?.current);
+      const next = (data.actions?.next || []).map(item => actionHtml("Next", item)).join("");
+      $("actions").innerHTML = previous + current + next || `<div class="empty">No active workflow action is available.</div>`;
+      $("logs").innerHTML = (data.logs || []).map(log => `<div class="log"><span>${esc(log.time)}</span><span class="level">${esc(log.level)}</span><span>${esc(log.message)}</span></div>`).join("") || `<div class="empty">No log entries yet.</div>`;
+    }
+    async function refresh() {
+      try {
+        const response = await fetch("/api/monitor/status", { cache: "no-store" });
+        const payload = await response.json();
+        if (!payload.ok) throw new Error(payload.error || "Status error");
+        render(payload.data);
+      } catch (error) {
+        setOnline(false);
+        $("updated").textContent = `Offline: ${error.message}`;
+        $("mode").textContent = "Offline";
+        $("modeDetail").textContent = "Automat server is not reachable";
+      }
+    }
+    refresh();
+    setInterval(refresh, 1500);
+  </script>
+</body>
+</html>
