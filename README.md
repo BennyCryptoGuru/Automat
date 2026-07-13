@@ -4,6 +4,17 @@ A local studio for building and running browser automations. The backend is Pyth
 
 ## Run
 
+For a normal Windows installation, run:
+
+```powershell
+install.bat
+start.bat
+```
+
+`start.bat` starts Automat hidden and opens the local web UI unless **Stealth run** is enabled.
+
+For development, you can also run it manually:
+
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -45,6 +56,8 @@ Automat does not pass a custom `--user-data-dir` to Chrome and does not use brow
 - Context PNG previews for saved elements: the object is centered and cropped with a dynamic margin into a suitable square or rectangle.
 - Frontend language switcher: English is the default UI language and Czech is available as a separate option.
 - Lightweight stealth monitor at `http://127.0.0.1:5000/monitor`, built as a single self-contained HTML page with inline CSS/JS. It shows online/offline state, background mode, the last two log entries, and nearby workflow actions.
+- Optional watchdog scripts can restart Automat only when Autorun is enabled. See `WATCHDOG_AUTORUN_GUIDE.txt`.
+- `disable_stealth_run.bat` turns off Stealth run and restarts Automat with the visible UI.
 
 ## Security Notes
 

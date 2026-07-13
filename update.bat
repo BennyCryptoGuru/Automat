@@ -2,11 +2,16 @@
 setlocal
 cd /d "%~dp0"
 
-if not exist "production version\update.bat" (
-  echo Production update script was not found.
-  echo Expected path: %~dp0production version\update.bat
+echo Starting Automat update...
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0update.ps1" %*
+if errorlevel 1 (
+  echo.
+  echo Update failed. Details are shown above.
   pause
   exit /b 1
 )
 
-call "production version\update.bat" %*
+echo.
+echo Update completed.
+timeout /t 2 /nobreak >nul
+exit /b 0

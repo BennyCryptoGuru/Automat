@@ -23,10 +23,3 @@ data/browser-profile-recovered-*/
 data/active-browser-profile.txt
 data/screenshots/*
 !data/screenshots/.gitkeep
-produkcni verze/data/automat.db
-produkcni verze/data/automat.db-*
-produkcni verze/data/*.log
-produkcni verze/data/screenshots/*
-!produkcni verze/data/screenshots/.gitkeep
-produkcni verze/__pycache__/
-produkcni verze/automat/__pycache__/

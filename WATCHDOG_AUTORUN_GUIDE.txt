@@ -3,7 +3,7 @@ AUTOMAT - WATCHDOG AND AUTORUN
 
 What the watchdog does
 ----------------------
-The watchdog is a small hidden monitor for the production build of Automat.
+The watchdog is a small hidden monitor for Automat.
 It can keep running, but it restarts Automat only when Autorun is enabled in the application settings.
 
 When Autorun is disabled, the watchdog does not start anything.
@@ -11,7 +11,7 @@ When Autorun is disabled, the watchdog does not start anything.
 
 How to run Automat with the watchdog
 ------------------------------------
-1. Start the production build with:
+1. Start Automat with:
    start.bat
 
 2. If Automat is not installed yet, start.bat runs the installer first.
@@ -31,7 +31,7 @@ How to start the watchdog automatically after Windows login
 -----------------------------------------------------------
 The easiest way:
 
-1. In the production build folder, run:
+1. In the Automat folder, run:
    add_watchdog_to_startup.bat
 
 2. The script creates a shortcut named:
@@ -80,7 +80,7 @@ Using the prepared script `add_watchdog_to_startup.bat` is easier.
 
 Important behavior
 ------------------
-- The watchdog is included only in the production build.
+- The watchdog only starts Automat when Autorun is enabled.
 - The development version does not start it.
 - The watchdog does not run workflows by itself.
 - The watchdog only restarts the Automat server.

@@ -18,7 +18,7 @@ $shortcut.TargetPath = "wscript.exe"
 $shortcut.Arguments = "`"$launcher`""
 $shortcut.WorkingDirectory = $root
 $shortcut.WindowStyle = 7
-$shortcut.Description = "Automat Watchdog - starts production Automat only when Autorun is enabled"
+$shortcut.Description = "Automat Watchdog - starts Automat only when Autorun is enabled"
 $shortcut.Save()
 
 Write-Host "Shortcut created:" -ForegroundColor Green
