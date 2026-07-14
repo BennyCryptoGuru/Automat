@@ -539,6 +539,34 @@ def test_element_export_and_import_preserves_site_and_parent(client):
     assert imported_child["metadata"] == {"tag": "button"}
 
 
+def test_element_export_and_import_restores_preview_image(client):
+    site = client.post("/api/sites", json={"name": "Preview", "url": "https://preview.example"}).get_json()["data"]
+    element = client.post("/api/elements", json={
+        "site_id": site["id"], "name": "Preview object", "strategy": "id", "locator": "preview",
+        "capture_preview": False,
+    }).get_json()["data"]
+    browser = client.application.extensions["automat_browser"]
+    db = client.application.extensions["automat_db"]
+    preview_bytes = b"\x89PNG\r\n\x1a\npreview"
+    preview_path = browser.screenshot_dir / f"element-{element['id']}.png"
+    preview_path.write_bytes(preview_bytes)
+    db.execute("UPDATE elements SET preview_path=? WHERE id=?", (f"/screenshots/{preview_path.name}", element["id"]))
+
+    archive = client.get("/api/elements/export").get_json()
+    exported = next(item for item in archive["elements"] if item["name"] == "Preview object")
+    assert exported["preview"]["data"]
+
+    client.delete(f"/api/elements/{element['id']}")
+    preview_path.unlink()
+    imported = client.post("/api/elements/import", json=archive).get_json()["data"]
+    values = client.get("/api/bootstrap").get_json()["data"]["elements"]
+    restored = next(item for item in values if item["name"] == "Preview object")
+    restored_path = browser.screenshot_dir / Path(restored["preview_path"]).name
+
+    assert imported == {"created": 1, "reused": 0, "total": 1}
+    assert restored_path.read_bytes() == preview_bytes
+
+
 def test_element_import_rejects_unknown_format(client):
     with pytest.raises(ValueError, match="object backup"):
         client.post("/api/elements/import", json={"format": "something-else", "version": 1})

@@ -1,4 +1,6 @@
 import atexit
+import base64
+import binascii
 import json
 import re
 import threading
@@ -61,6 +63,38 @@ def create_app(test_config=None):
             (key, json.dumps(value)),
         )
         return value
+
+    def export_element_preview(item):
+        preview_path = item.get("preview_path")
+        if not preview_path:
+            return None
+        filename = Path(str(preview_path).split("?", 1)[0]).name
+        if not filename:
+            return None
+        path = browser.screenshot_dir / filename
+        if not path.is_file():
+            return None
+        return {
+            "filename": filename,
+            "content_type": "image/png",
+            "data": base64.b64encode(path.read_bytes()).decode("ascii"),
+        }
+
+    def import_element_preview(connection, item, element_id):
+        preview = item.get("preview")
+        if not isinstance(preview, dict) or not preview.get("data"):
+            return
+        try:
+            content = base64.b64decode(str(preview["data"]), validate=True)
+        except (binascii.Error, ValueError):
+            raise ValueError("The object backup contains an invalid preview image") from None
+        if len(content) > 5 * 1024 * 1024:
+            raise ValueError("The object backup contains a preview image that is too large")
+        browser.screenshot_dir.mkdir(parents=True, exist_ok=True)
+        filename = f"element-{element_id}.png"
+        path = browser.screenshot_dir / filename
+        path.write_bytes(content)
+        connection.execute("UPDATE elements SET preview_path=? WHERE id=?", (f"/screenshots/{filename}", element_id))
 
     def settings_payload():
         return {
@@ -274,6 +308,7 @@ def create_app(test_config=None):
                 "name": item["name"], "strategy": item["strategy"], "locator": item["locator"],
                 "alternatives": item.get("alternatives", []), "frame_path": item.get("frame_path", []),
                 "metadata": item.get("metadata", {}), "parent_ref": element_refs.get(item.get("parent_id")),
+                "preview": export_element_preview(item),
             } for item in elements],
         }
         response = app.response_class(json.dumps(archive, ensure_ascii=False, indent=2), mimetype="application/json")
@@ -335,6 +370,7 @@ def create_app(test_config=None):
                     created_refs.add(item["ref"])
                     created_count += 1
                 element_refs[item["ref"]] = element_id
+                import_element_preview(connection, item, element_id)
             for item in elements:
                 if item.get("parent_ref") and item["ref"] in created_refs:
                     parent_id = element_refs.get(item["parent_ref"])
