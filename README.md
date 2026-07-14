@@ -11,7 +11,7 @@ install.bat
 start.bat
 ```
 
-`start.bat` starts Automat hidden and opens the local web UI unless **Stealth run** is enabled.
+By default, `start.bat` opens a terminal and keeps it open while Automat runs. The local web UI opens in the browser. If **Stealth run** is enabled in settings, the next manual start or Windows restart starts Automat in the background without a visible terminal or browser window.
 
 To update an installed copy directly from GitHub, run:
 
@@ -19,7 +19,7 @@ To update an installed copy directly from GitHub, run:
 update.bat
 ```
 
-The updater downloads the current `main` branch from `BennyCryptoGuru/Automat`, replaces program files, keeps `.venv` and `data`, refreshes dependencies, and starts Automat again. After update, the web UI opens visibly unless **Stealth run** is enabled in settings.
+The updater downloads the current `main` branch from `BennyCryptoGuru/Automat`, replaces program files, keeps `.venv` and `data`, refreshes dependencies, and starts Automat again. After update, Automat uses visible mode unless **Stealth run** is enabled in settings.
 
 The root folder keeps only the `.bat` launchers intended for manual use. Internal PowerShell, VBScript, and watchdog helper files live in `scripts`.
 

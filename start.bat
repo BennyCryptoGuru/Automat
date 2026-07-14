@@ -15,5 +15,11 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 echo Starting Automat...
-wscript.exe "%~dp0scripts\start_hidden.vbs"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\start.ps1"
+if errorlevel 1 (
+  echo.
+  echo Automat stopped with an error. Details are shown above.
+  pause
+  exit /b 1
+)
 exit /b 0

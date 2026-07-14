@@ -6,7 +6,6 @@ $AppUrl = "http://127.0.0.1:5000"
 try {
     $response = Invoke-WebRequest -Uri "$AppUrl/api/bootstrap" -UseBasicParsing -TimeoutSec 2
     if ($response.StatusCode -eq 200) {
-        Start-Process $AppUrl
         exit 0
     }
 } catch {

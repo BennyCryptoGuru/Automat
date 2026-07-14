@@ -78,14 +78,14 @@ function Start-AutomatAfterUpdate {
         Write-Host "Restart skipped because -NoRestart was used."
         return
     }
-    $launcher = Join-Path $TargetPath "scripts\start_hidden.vbs"
+    $launcher = Join-Path $TargetPath "start.bat"
     if (-not (Test-Path -LiteralPath $launcher)) {
-        Write-Warning "Hidden launcher was not found: $launcher"
+        Write-Warning "Start launcher was not found: $launcher"
         return
     }
     Write-Step "Starting Automat"
-    Write-Host "Automat will open the visible UI unless Stealth run is enabled in settings."
-    Start-Process -FilePath "wscript.exe" -ArgumentList @("`"$launcher`"") -WorkingDirectory $TargetPath -WindowStyle Hidden
+    Write-Host "Automat will use visible mode unless Stealth run is enabled in settings."
+    Start-Process -FilePath $launcher -WorkingDirectory $TargetPath
 }
 
 function Get-GitHubArchiveUrl {

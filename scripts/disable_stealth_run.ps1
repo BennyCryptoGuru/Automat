@@ -102,12 +102,12 @@ function Stop-AutomatServer {
 
 function Start-AutomatVisible {
     if ($NoRestart) { return }
-    $launcher = Join-Path $Root "scripts\start_hidden.vbs"
+    $launcher = Join-Path $Root "start.bat"
     if (-not (Test-Path -LiteralPath $launcher)) {
-        throw "Hidden launcher was not found: $launcher"
+        throw "Start launcher was not found: $launcher"
     }
-    Start-Process -FilePath "wscript.exe" -ArgumentList @("`"$launcher`"") -WorkingDirectory $Root -WindowStyle Hidden
-    Write-Host "Automat restart requested. Because Stealth run is disabled, the UI will open visibly."
+    Start-Process -FilePath $launcher -WorkingDirectory $Root
+    Write-Host "Automat restart requested. Because Stealth run is disabled, the terminal and UI will open visibly."
 }
 
 Write-Host "Automat - disable Stealth run" -ForegroundColor Magenta

@@ -16,9 +16,12 @@ How to run Automat with the watchdog
 
 2. If Automat is not installed yet, start.bat runs the installer first.
 
-3. start.bat starts:
-   - the Automat server hidden,
+3. By default, start.bat starts:
+   - a visible terminal with the Automat server,
+   - the Automat UI in the browser,
    - the watchdog hidden.
+
+   If Stealth run is enabled in settings, start.bat starts Automat hidden instead.
 
 4. In the application, click the settings gear in the top bar.
 
@@ -81,7 +84,6 @@ Using the prepared script `add_watchdog_to_startup.bat` is easier.
 Important behavior
 ------------------
 - The watchdog only starts Automat when Autorun is enabled.
-- The development version does not start it.
 - The watchdog does not run workflows by itself.
 - The watchdog only restarts the Automat server.
 - Autorun inside Automat then selects the first saved site, optionally performs login, and starts the first workflow in an infinite loop.

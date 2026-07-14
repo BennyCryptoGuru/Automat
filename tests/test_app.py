@@ -176,7 +176,7 @@ def test_stealth_recovery_helper_is_available():
     assert "stealth_run" in text
     assert "json.dumps(False)" in text
     assert "/api/browser/quit" in text
-    assert "scripts\\start_hidden.vbs" in text
+    assert 'Join-Path $Root "start.bat"' in text
     assert "disable_stealth_run.bat" in (root / "scripts" / "update.ps1").read_text(encoding="utf-8")
 
 
@@ -190,18 +190,27 @@ def test_update_script_downloads_from_github_and_preserves_local_data():
     assert "Backup-LocalData" in text
     assert "Backing up local data" in text
     assert "Local data in data and the .venv environment will be preserved." in text
-    assert "Automat will open the visible UI unless Stealth run is enabled in settings." in text
+    assert "Automat will use visible mode unless Stealth run is enabled in settings." in text
     assert "production version" in text
     assert "produkcni verze" in text
 
 
-def test_start_scripts_prevent_duplicate_server_instances():
+def test_start_scripts_default_visible_and_stealth_only_when_enabled():
     root = Path(__file__).resolve().parents[1]
-    start_helper = (root / "scripts" / "start_hidden.ps1").read_text(encoding="utf-8")
+    start_batch = (root / "start.bat").read_text(encoding="utf-8")
+    start_helper = (root / "scripts" / "start.ps1").read_text(encoding="utf-8")
+    hidden_helper = (root / "scripts" / "start_hidden.ps1").read_text(encoding="utf-8")
     runner = (root / "run.py").read_text(encoding="utf-8")
 
+    assert "scripts\\start.ps1" in start_batch
     assert "Invoke-WebRequest" in start_helper
     assert "$AppUrl/api/bootstrap" in start_helper
+    assert "Test-StealthRunEnabled" in start_helper
+    assert "Starting Automat in visible mode." in start_helper
+    assert "Stealth run is enabled. Starting Automat in the background." in start_helper
+    assert ".venv\\Scripts\\python.exe" in start_helper
+    assert "scripts\\start_hidden.vbs" in start_helper
+    assert "pythonw.exe" in hidden_helper
     assert 'Join-Path $Root "run.py"' in start_helper
     assert 'CreateMutexW(None, True, "Local\\\\AutomatBrowserStudio")' in runner
 
@@ -221,6 +230,7 @@ def test_manual_launchers_stay_in_root_and_helpers_live_in_scripts():
         "update.ps1",
         "disable_stealth_run.ps1",
         "add_watchdog_to_startup.ps1",
+        "start.ps1",
         "start_hidden.ps1",
         "start_hidden.vbs",
         "watchdog.py",
