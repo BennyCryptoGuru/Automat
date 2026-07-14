@@ -73,7 +73,7 @@ function Stop-AutomatIfRunning {
     }
 }
 
-function Start-AutomatHidden {
+function Start-AutomatAfterUpdate {
     if ($NoRestart) {
         Write-Host "Restart skipped because -NoRestart was used."
         return
@@ -83,7 +83,8 @@ function Start-AutomatHidden {
         Write-Warning "Hidden launcher was not found: $launcher"
         return
     }
-    Write-Step "Starting Automat hidden"
+    Write-Step "Starting Automat"
+    Write-Host "Automat will open the visible UI unless Stealth run is enabled in settings."
     Start-Process -FilePath "wscript.exe" -ArgumentList @("`"$launcher`"") -WorkingDirectory $TargetPath -WindowStyle Hidden
 }
 
@@ -194,7 +195,7 @@ try {
 
     Write-Host "`nUpdate from GitHub is complete." -ForegroundColor Green
     Write-Host "The database, screenshots, logs, and browser-independent local data in data were preserved."
-    Start-AutomatHidden
+    Start-AutomatAfterUpdate
 } finally {
     Remove-Item -LiteralPath $temporaryRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

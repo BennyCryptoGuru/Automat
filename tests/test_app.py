@@ -179,6 +179,7 @@ def test_update_script_downloads_from_github_and_preserves_local_data():
     assert "Invoke-WebRequest" in text
     assert "Expand-Archive" in text
     assert "Local data in data and the .venv environment will be preserved." in text
+    assert "Automat will open the visible UI unless Stealth run is enabled in settings." in text
     assert "production version" in text
     assert "produkcni verze" in text
 

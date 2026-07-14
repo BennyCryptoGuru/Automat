@@ -19,7 +19,7 @@ To update an installed copy directly from GitHub, run:
 update.bat
 ```
 
-The updater downloads the current `main` branch from `BennyCryptoGuru/Automat`, replaces program files, keeps `.venv` and `data`, refreshes dependencies, and starts Automat again.
+The updater downloads the current `main` branch from `BennyCryptoGuru/Automat`, replaces program files, keeps `.venv` and `data`, refreshes dependencies, and starts Automat again. After update, the web UI opens visibly unless **Stealth run** is enabled in settings.
 
 For development, you can also run it manually:
 
