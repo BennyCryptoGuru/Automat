@@ -13,6 +13,14 @@ start.bat
 
 `start.bat` starts Automat hidden and opens the local web UI unless **Stealth run** is enabled.
 
+To update an installed copy directly from GitHub, run:
+
+```powershell
+update.bat
+```
+
+The updater downloads the current `main` branch from `BennyCryptoGuru/Automat`, replaces program files, keeps `.venv` and `data`, refreshes dependencies, and starts Automat again.
+
 For development, you can also run it manually:
 
 ```powershell

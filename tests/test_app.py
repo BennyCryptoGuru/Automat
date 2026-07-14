@@ -171,6 +171,18 @@ def test_stealth_recovery_helper_is_available():
     assert "disable_stealth_run.bat" in (root / "update.ps1").read_text(encoding="utf-8")
 
 
+def test_update_script_downloads_from_github_and_preserves_local_data():
+    root = Path(__file__).resolve().parents[1]
+    text = (root / "update.ps1").read_text(encoding="utf-8")
+
+    assert "https://github.com/$RepoOwner/$RepoName/archive/refs/heads/$Branch.zip" in text
+    assert "Invoke-WebRequest" in text
+    assert "Expand-Archive" in text
+    assert "Local data in data and the .venv environment will be preserved." in text
+    assert "production version" in text
+    assert "produkcni verze" in text
+
+
 def test_runner_controls_are_enabled_only_for_valid_state(client):
     html = client.get("/").get_data(as_text=True)
     javascript = client.get("/static/app.js").get_data(as_text=True)
