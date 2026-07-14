@@ -17,6 +17,7 @@ __pycache__/
 data/automat.db
 data/automat.db-*
 data/*.log
+data/backups/
 data/browser-profile/
 data/browser-profile-main/
 data/browser-profile-recovered-*/

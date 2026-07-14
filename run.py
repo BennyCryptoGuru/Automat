@@ -28,8 +28,9 @@ def ensure_output_streams():
 
 
 def acquire_single_instance():
-    handle = ctypes.windll.kernel32.CreateMutexW(None, False, "Local\\AutomatBrowserStudio")
-    if not handle or ctypes.windll.kernel32.GetLastError() == 183:
+    handle = ctypes.windll.kernel32.CreateMutexW(None, True, "Local\\AutomatBrowserStudio")
+    last_error = ctypes.windll.kernel32.GetLastError()
+    if not handle or last_error == 183:
         webbrowser.open(APP_URL)
         print(f"Automat is already running. Opening the existing instance: {APP_URL}")
         return None

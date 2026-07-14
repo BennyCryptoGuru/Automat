@@ -152,6 +152,27 @@ function Copy-ProgramFiles([string]$SourcePath) {
     }
 }
 
+function Backup-LocalData {
+    $dataPath = Join-Path $TargetPath "data"
+    if (-not (Test-Path -LiteralPath $dataPath)) {
+        return
+    }
+    $hasDatabase = Test-Path -LiteralPath (Join-Path $dataPath "automat.db")
+    $hasScreenshots = @(Get-ChildItem -LiteralPath (Join-Path $dataPath "screenshots") -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ne ".gitkeep" }).Count -gt 0
+    if (-not $hasDatabase -and -not $hasScreenshots) {
+        return
+    }
+
+    Write-Step "Backing up local data"
+    $backupRoot = Join-Path $dataPath "backups"
+    $backupPath = Join-Path $backupRoot ("update-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+    New-Item -ItemType Directory -Force -Path $backupPath | Out-Null
+    & robocopy $dataPath $backupPath /E /XD "backups" /XF "*.log" /NFL /NDL /NJH /NJS /NP | Out-Null
+    if ($LASTEXITCODE -gt 7) { throw "Backing up local data failed (robocopy $LASTEXITCODE)." }
+    Write-Host "Backup created: $backupPath"
+}
+
 function Remove-ObsoleteProgramFiles {
     Write-Step "Removing obsolete program folders"
     Remove-DirectoryInside $TargetPath (Join-Path $TargetPath "production version")
@@ -189,6 +210,8 @@ New-Item -ItemType Directory -Force -Path $temporaryRoot | Out-Null
 try {
     Write-Step "Stopping running Automat"
     Stop-AutomatIfRunning
+
+    Backup-LocalData
 
     $downloadedSource = Download-GitHubSource $temporaryRoot
     Copy-ProgramFiles $downloadedSource

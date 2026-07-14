@@ -107,6 +107,15 @@ def test_language_switcher_is_available(client):
     assert ".language-switch" in stylesheet
 
 
+def test_language_switcher_does_not_observe_its_own_text_mutations(client):
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+
+    assert "if(node.nodeValue!==translated)node.nodeValue=translated" in javascript
+    assert "if(element.getAttribute(name)!==translated)element.setAttribute(name,translated)" in javascript
+    assert "i18nObserver.observe(document.body,{childList:true,subtree:true})" in javascript
+    assert "characterData:true" not in javascript
+
+
 def test_stealth_monitor_page_is_self_contained(client):
     html = client.get("/monitor").get_data(as_text=True)
 
@@ -178,10 +187,23 @@ def test_update_script_downloads_from_github_and_preserves_local_data():
     assert "https://github.com/$RepoOwner/$RepoName/archive/refs/heads/$Branch.zip" in text
     assert "Invoke-WebRequest" in text
     assert "Expand-Archive" in text
+    assert "Backup-LocalData" in text
+    assert "Backing up local data" in text
     assert "Local data in data and the .venv environment will be preserved." in text
     assert "Automat will open the visible UI unless Stealth run is enabled in settings." in text
     assert "production version" in text
     assert "produkcni verze" in text
+
+
+def test_start_scripts_prevent_duplicate_server_instances():
+    root = Path(__file__).resolve().parents[1]
+    start_helper = (root / "scripts" / "start_hidden.ps1").read_text(encoding="utf-8")
+    runner = (root / "run.py").read_text(encoding="utf-8")
+
+    assert "Invoke-WebRequest" in start_helper
+    assert "$AppUrl/api/bootstrap" in start_helper
+    assert 'Join-Path $Root "run.py"' in start_helper
+    assert 'CreateMutexW(None, True, "Local\\\\AutomatBrowserStudio")' in runner
 
 
 def test_manual_launchers_stay_in_root_and_helpers_live_in_scripts():
