@@ -32,6 +32,14 @@ def create_app(test_config=None):
     def payload():
         return request.get_json(silent=True) or {}
 
+    @app.after_request
+    def allow_local_monitor_file(response):
+        if request.path == "/api/monitor/status":
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
+
     def ok(data=None, status=200):
         return jsonify({"ok": True, "data": data}), status
 
@@ -115,7 +123,7 @@ def create_app(test_config=None):
             "position": action["position"],
             "type": action["action_type"],
             "label": ACTION_TYPES.get(action["action_type"], action["action_type"]),
-            "details": " · ".join(details),
+            "details": " - ".join(details),
             "active": active,
         }
 

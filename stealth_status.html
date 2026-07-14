@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Automat Stealth Status</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101722;
+      --panel: #172233;
+      --panel-2: #111a28;
+      --line: #26364f;
+      --text: #eef5ff;
+      --muted: #98a8bd;
+      --ok: #20d49f;
+      --bad: #ff5d75;
+      --warn: #f3ba5d;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 18px;
+      background: radial-gradient(circle at top left, #263854, var(--bg) 36rem);
+      color: var(--text);
+    }
+    main {
+      width: min(920px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: 12px;
+    }
+    header, section {
+      background: rgba(23, 34, 51, .94);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, .24);
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+    }
+    h1 { margin: 0; font-size: 22px; }
+    h2 {
+      margin: 0 0 11px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    section { padding: 16px; }
+    a.button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #0d1521;
+      color: var(--text);
+      padding: 8px 12px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+    a.button:hover { border-color: var(--ok); }
+    .top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .sub { color: var(--muted); font-size: 12px; margin-top: 4px; overflow-wrap: anywhere; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: #0d1521;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--bad);
+      box-shadow: 0 0 0 5px rgba(255, 93, 117, .12);
+    }
+    .online .dot {
+      background: var(--ok);
+      box-shadow: 0 0 0 5px rgba(32, 212, 159, .14), 0 0 18px rgba(32, 212, 159, .72);
+      animation: pulse 1.15s ease-in-out infinite;
+    }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .tile {
+      min-height: 84px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--panel-2);
+    }
+    .label { color: var(--muted); font-size: 11px; margin-bottom: 7px; }
+    .value { font-size: 17px; font-weight: 900; overflow-wrap: anywhere; }
+    .actions, .logs { display: grid; gap: 8px; }
+    .action {
+      display: grid;
+      grid-template-columns: 78px 1fr;
+      gap: 10px;
+      padding: 10px 11px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel-2);
+    }
+    .action.current {
+      border-color: rgba(32, 212, 159, .72);
+      box-shadow: inset 4px 0 0 var(--ok);
+    }
+    .tag {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .action strong { display: block; font-size: 13px; }
+    .action small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+    .log {
+      display: grid;
+      grid-template-columns: 66px 72px 1fr;
+      gap: 8px;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--panel-2);
+      font-size: 12px;
+    }
+    .level { color: var(--warn); font-weight: 900; text-transform: uppercase; }
+    .empty {
+      color: var(--muted);
+      padding: 10px;
+      border: 1px dashed var(--line);
+      border-radius: 11px;
+      font-size: 12px;
+    }
+    footer { color: var(--muted); text-align: center; font-size: 11px; padding: 7px; }
+    @keyframes pulse {
+      0%, 100% { transform: scale(.9); opacity: .88; }
+      50% { transform: scale(1.18); opacity: 1; }
+    }
+    @media (max-width: 760px) {
+      header { align-items: flex-start; flex-direction: column; }
+      .grid { grid-template-columns: 1fr; }
+      .log { grid-template-columns: 54px 60px 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Automat Stealth Status</h1>
+        <div class="sub" id="updated">Waiting for Automat...</div>
+      </div>
+      <div class="top-actions">
+        <a class="button" href="http://127.0.0.1:5000/monitor" target="_blank" rel="noreferrer">Full monitor</a>
+        <a class="button" href="http://127.0.0.1:5000/" target="_blank" rel="noreferrer">Open app</a>
+        <div class="status" id="onlinePill"><span class="dot"></span><span>OFFLINE</span></div>
+      </div>
+    </header>
+
+    <section>
+      <h2>Status</h2>
+      <div class="grid">
+        <div class="tile">
+          <div class="label">Run mode</div>
+          <div class="value" id="mode">Offline</div>
+          <div class="sub" id="modeDetail">Server is not reachable yet.</div>
+        </div>
+        <div class="tile">
+          <div class="label">Workflow</div>
+          <div class="value" id="workflow">None</div>
+          <div class="sub" id="runnerStatus"></div>
+        </div>
+        <div class="tile">
+          <div class="label">Browser</div>
+          <div class="value" id="browser">Not running</div>
+          <div class="sub" id="browserUrl"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Actions</h2>
+      <div class="actions" id="actions"></div>
+    </section>
+
+    <section>
+      <h2>Last Log Entries</h2>
+      <div class="logs" id="logs"></div>
+    </section>
+
+    <footer>This file reads only the local monitor API and refreshes every 1.5 seconds.</footer>
+  </main>
+
+  <script>
+    const API_URL = "http://127.0.0.1:5000/api/monitor/status";
+    const $ = id => document.getElementById(id);
+    const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[char]));
+
+    function setOnline(online) {
+      const pill = $("onlinePill");
+      pill.classList.toggle("online", online);
+      pill.querySelector("span:last-child").textContent = online ? "ONLINE" : "OFFLINE";
+    }
+
+    function actionHtml(kind, item) {
+      if (!item) return "";
+      const currentClass = kind === "Current" ? " current" : "";
+      const details = item.details || item.type || "";
+      return `<div class="action${currentClass}">
+        <div class="tag">${kind}</div>
+        <div>
+          <strong>#${esc(item.position)} ${esc(item.label)}</strong>
+          <small>${esc(details)}</small>
+        </div>
+      </div>`;
+    }
+
+    function render(data) {
+      const runner = data.runner || {};
+      const browser = data.browser || {};
+      const settings = data.settings || {};
+      const actions = data.actions || {};
+
+      setOnline(true);
+      $("updated").textContent = `Last update: ${new Date().toLocaleTimeString()}`;
+      $("mode").textContent = data.background ? "Background" : "Visible";
+      $("modeDetail").textContent = settings.stealth_run
+        ? "Stealth run is enabled."
+        : "Stealth run is disabled.";
+      $("workflow").textContent = actions.workflow?.name || "None";
+      $("runnerStatus").textContent = `${runner.status || "unknown"}${runner.message ? " - " + runner.message : ""}`;
+      $("browser").textContent = browser.running ? `${browser.browser || "Chrome"} running` : "Not running";
+      $("browserUrl").textContent = browser.url || "";
+
+      const previous = (actions.previous || []).map(item => actionHtml("Previous", item)).join("");
+      const current = actionHtml("Current", actions.current);
+      const next = (actions.next || []).map(item => actionHtml("Next", item)).join("");
+      $("actions").innerHTML = previous + current + next || '<div class="empty">No active workflow action is available.</div>';
+
+      $("logs").innerHTML = (data.logs || []).map(log => `<div class="log">
+        <span>${esc(log.time)}</span>
+        <span class="level">${esc(log.level)}</span>
+        <span>${esc(log.message)}</span>
+      </div>`).join("") || '<div class="empty">No log entries yet.</div>';
+    }
+
+    async function refresh() {
+      try {
+        const response = await fetch(API_URL, { cache: "no-store" });
+        const payload = await response.json();
+        if (!payload.ok) throw new Error(payload.error || "Status error");
+        render(payload.data);
+      } catch (error) {
+        setOnline(false);
+        $("updated").textContent = `Offline: ${error.message}`;
+        $("mode").textContent = "Offline";
+        $("modeDetail").textContent = "Automat server is not reachable.";
+        $("workflow").textContent = "None";
+        $("runnerStatus").textContent = "";
+        $("browser").textContent = "Not running";
+        $("browserUrl").textContent = "";
+        $("actions").innerHTML = '<div class="empty">Start Automat to see workflow actions.</div>';
+      }
+    }
+
+    refresh();
+    setInterval(refresh, 1500);
+  </script>
+</body>
+</html>

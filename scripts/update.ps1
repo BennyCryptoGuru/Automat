@@ -128,6 +128,7 @@ function Copy-ProgramFiles([string]$SourcePath) {
         "install.bat",
         "disable_stealth_run.bat",
         "update.bat",
+        "stealth_status.html",
         "requirements.txt",
         "run.py",
         "add_watchdog_to_startup.bat",

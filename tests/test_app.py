@@ -139,6 +139,24 @@ def test_stealth_monitor_page_is_self_contained(client):
     assert 'src="' not in html
 
 
+def test_root_stealth_status_file_is_self_contained():
+    root = Path(__file__).resolve().parents[1]
+    html = (root / "stealth_status.html").read_text(encoding="utf-8")
+
+    assert "Automat Stealth Status" in html
+    assert "http://127.0.0.1:5000/api/monitor/status" in html
+    assert "<style>" in html
+    assert "<script>" in html
+    assert 'rel="stylesheet"' not in html
+    assert 'src="' not in html
+
+
+def test_monitor_status_allows_root_file_access(client):
+    response = client.get("/api/monitor/status")
+
+    assert response.headers["Access-Control-Allow-Origin"] == "*"
+
+
 def test_monitor_status_returns_logs_and_action_window(client):
     site = client.post("/api/sites", json={"name": "Monitor", "url": "https://example.test"}).get_json()["data"]
     element = client.post("/api/elements", json={
