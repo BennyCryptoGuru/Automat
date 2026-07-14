@@ -73,7 +73,7 @@ If you want to do it manually:
 2. Enter:
    shell:startup
 3. In the opened folder, create a shortcut to:
-   watchdog_hidden.vbs
+   scripts\watchdog_hidden.vbs
 
 Using the prepared script `add_watchdog_to_startup.bat` is easier.
 

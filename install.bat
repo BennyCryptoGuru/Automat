@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0"
 
 echo Starting Automat installation...
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\install.ps1"
 if errorlevel 1 (
   echo.
   echo Installation failed. Details are shown above.

@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
-$root = (Resolve-Path -LiteralPath $PSScriptRoot).Path
-$launcher = Join-Path $root "watchdog_hidden.vbs"
+$root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
+$launcher = Join-Path $root "scripts\watchdog_hidden.vbs"
 if (-not (Test-Path -LiteralPath $launcher)) {
     throw "Watchdog launcher was not found: $launcher"
 }

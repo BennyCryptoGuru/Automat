@@ -8,7 +8,7 @@ import urllib.request
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 DATABASE = ROOT / "data" / "automat.db"
 APP_URL = "http://127.0.0.1:5000/api/settings"
 MUTEX_NAME = "Local\\AutomatAutorunWatchdog"

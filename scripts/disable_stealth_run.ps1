@@ -3,7 +3,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$Root = (Resolve-Path -LiteralPath $PSScriptRoot).Path
+$Root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $DataDir = Join-Path $Root "data"
 $Database = Join-Path $DataDir "automat.db"
 $AppUrl = "http://127.0.0.1:5000"
@@ -102,7 +102,7 @@ function Stop-AutomatServer {
 
 function Start-AutomatVisible {
     if ($NoRestart) { return }
-    $launcher = Join-Path $Root "start_hidden.vbs"
+    $launcher = Join-Path $Root "scripts\start_hidden.vbs"
     if (-not (Test-Path -LiteralPath $launcher)) {
         throw "Hidden launcher was not found: $launcher"
     }

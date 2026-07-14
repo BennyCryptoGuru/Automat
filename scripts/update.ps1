@@ -10,7 +10,7 @@ param(
 $ErrorActionPreference = "Stop"
 $ScriptPath = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 if ([string]::IsNullOrWhiteSpace($TargetPath)) {
-    $TargetPath = $ScriptPath
+    $TargetPath = (Resolve-Path -LiteralPath (Join-Path $ScriptPath "..")).Path
 }
 $TargetPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($TargetPath)
 
@@ -78,7 +78,7 @@ function Start-AutomatAfterUpdate {
         Write-Host "Restart skipped because -NoRestart was used."
         return
     }
-    $launcher = Join-Path $TargetPath "start_hidden.vbs"
+    $launcher = Join-Path $TargetPath "scripts\start_hidden.vbs"
     if (-not (Test-Path -LiteralPath $launcher)) {
         Write-Warning "Hidden launcher was not found: $launcher"
         return
@@ -124,23 +124,15 @@ function Copy-ProgramFiles([string]$SourcePath) {
     $itemsToCopy = @(
         "automat",
         "tests",
+        "scripts",
         "install.bat",
-        "install.ps1",
         "disable_stealth_run.bat",
-        "disable_stealth_run.ps1",
         "update.bat",
-        "update.ps1",
         "requirements.txt",
         "run.py",
-        "watchdog.py",
-        "watchdog_hidden.ps1",
-        "watchdog_hidden.vbs",
         "add_watchdog_to_startup.bat",
-        "add_watchdog_to_startup.ps1",
         "remove_watchdog_from_startup.bat",
         "start.bat",
-        "start_hidden.ps1",
-        "start_hidden.vbs",
         "README.md",
         "WATCHDOG_AUTORUN_GUIDE.txt",
         "LICENSE",
@@ -164,6 +156,24 @@ function Remove-ObsoleteProgramFiles {
     Write-Step "Removing obsolete program folders"
     Remove-DirectoryInside $TargetPath (Join-Path $TargetPath "production version")
     Remove-DirectoryInside $TargetPath (Join-Path $TargetPath "produkcni verze")
+
+    $obsoleteRootFiles = @(
+        "add_watchdog_to_startup.ps1",
+        "disable_stealth_run.ps1",
+        "install.ps1",
+        "start_hidden.ps1",
+        "start_hidden.vbs",
+        "update.ps1",
+        "watchdog.py",
+        "watchdog_hidden.ps1",
+        "watchdog_hidden.vbs"
+    )
+    foreach ($file in $obsoleteRootFiles) {
+        $path = Join-Path $TargetPath $file
+        if (Test-Path -LiteralPath $path) {
+            Remove-Item -LiteralPath $path -Force
+        }
+    }
 }
 
 Write-Host "Automat - GitHub update" -ForegroundColor Magenta
@@ -190,7 +200,7 @@ try {
     Remove-DirectoryInside $TargetPath (Join-Path $TargetPath ".pytest_cache")
 
     Write-Step "Checking dependencies"
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $TargetPath "install.ps1")
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $TargetPath "scripts\install.ps1")
     if ($LASTEXITCODE -ne 0) { throw "Dependency installation or update failed." }
 
     Write-Host "`nUpdate from GitHub is complete." -ForegroundColor Green

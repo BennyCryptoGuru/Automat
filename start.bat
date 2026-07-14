@@ -15,5 +15,5 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 echo Starting Automat...
-wscript.exe "%~dp0start_hidden.vbs"
+wscript.exe "%~dp0scripts\start_hidden.vbs"
 exit /b 0

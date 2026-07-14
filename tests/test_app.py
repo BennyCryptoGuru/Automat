@@ -158,7 +158,7 @@ def test_monitor_status_returns_logs_and_action_window(client):
 
 def test_stealth_recovery_helper_is_available():
     root = Path(__file__).resolve().parents[1]
-    script = root / "disable_stealth_run.ps1"
+    script = root / "scripts" / "disable_stealth_run.ps1"
     batch = root / "disable_stealth_run.bat"
 
     assert script.exists()
@@ -167,13 +167,13 @@ def test_stealth_recovery_helper_is_available():
     assert "stealth_run" in text
     assert "json.dumps(False)" in text
     assert "/api/browser/quit" in text
-    assert "start_hidden.vbs" in text
-    assert "disable_stealth_run.bat" in (root / "update.ps1").read_text(encoding="utf-8")
+    assert "scripts\\start_hidden.vbs" in text
+    assert "disable_stealth_run.bat" in (root / "scripts" / "update.ps1").read_text(encoding="utf-8")
 
 
 def test_update_script_downloads_from_github_and_preserves_local_data():
     root = Path(__file__).resolve().parents[1]
-    text = (root / "update.ps1").read_text(encoding="utf-8")
+    text = (root / "scripts" / "update.ps1").read_text(encoding="utf-8")
 
     assert "https://github.com/$RepoOwner/$RepoName/archive/refs/heads/$Branch.zip" in text
     assert "Invoke-WebRequest" in text
@@ -182,6 +182,35 @@ def test_update_script_downloads_from_github_and_preserves_local_data():
     assert "Automat will open the visible UI unless Stealth run is enabled in settings." in text
     assert "production version" in text
     assert "produkcni verze" in text
+
+
+def test_manual_launchers_stay_in_root_and_helpers_live_in_scripts():
+    root = Path(__file__).resolve().parents[1]
+    manual_launchers = {
+        "install.bat",
+        "start.bat",
+        "update.bat",
+        "disable_stealth_run.bat",
+        "add_watchdog_to_startup.bat",
+        "remove_watchdog_from_startup.bat",
+    }
+    helper_files = {
+        "install.ps1",
+        "update.ps1",
+        "disable_stealth_run.ps1",
+        "add_watchdog_to_startup.ps1",
+        "start_hidden.ps1",
+        "start_hidden.vbs",
+        "watchdog.py",
+        "watchdog_hidden.ps1",
+        "watchdog_hidden.vbs",
+    }
+
+    for launcher in manual_launchers:
+        assert (root / launcher).exists()
+    for helper in helper_files:
+        assert not (root / helper).exists()
+        assert (root / "scripts" / helper).exists()
 
 
 def test_runner_controls_are_enabled_only_for_valid_state(client):

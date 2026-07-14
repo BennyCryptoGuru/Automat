@@ -1,5 +1,6 @@
 $ErrorActionPreference = "Stop"
-Set-Location -LiteralPath $PSScriptRoot
+$Root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
+Set-Location -LiteralPath $Root
 
 function Write-Step([string]$Message) {
     Write-Host "`n==> $Message" -ForegroundColor Cyan
@@ -69,7 +70,7 @@ function Test-VenvUsable {
 }
 
 Write-Host "Automat - dependency installation" -ForegroundColor Magenta
-Write-Host "Folder: $PSScriptRoot"
+Write-Host "Folder: $Root"
 
 $python = Get-PythonExecutable
 if (-not $python) {

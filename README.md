@@ -21,6 +21,8 @@ update.bat
 
 The updater downloads the current `main` branch from `BennyCryptoGuru/Automat`, replaces program files, keeps `.venv` and `data`, refreshes dependencies, and starts Automat again. After update, the web UI opens visibly unless **Stealth run** is enabled in settings.
 
+The root folder keeps only the `.bat` launchers intended for manual use. Internal PowerShell, VBScript, and watchdog helper files live in `scripts`.
+
 For development, you can also run it manually:
 
 ```powershell

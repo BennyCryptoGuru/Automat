@@ -1,7 +1,8 @@
 $ErrorActionPreference = "Stop"
-Set-Location -LiteralPath $PSScriptRoot
+$Root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
+Set-Location -LiteralPath $Root
 
-$logDir = Join-Path $PSScriptRoot "data"
+$logDir = Join-Path $Root "data"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $logFile = Join-Path $logDir "watchdog-start.log"
 
@@ -19,5 +20,5 @@ if (-not (Test-Path -LiteralPath $watchdog)) {
     exit 0
 }
 
-Start-Process -FilePath $pythonw -ArgumentList @($watchdog) -WorkingDirectory $PSScriptRoot -WindowStyle Hidden
+Start-Process -FilePath $pythonw -ArgumentList @($watchdog) -WorkingDirectory $Root -WindowStyle Hidden
 "[$(Get-Date -Format s)] Watchdog spusten." | Add-Content -LiteralPath $logFile -Encoding UTF8
