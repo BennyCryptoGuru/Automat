@@ -30,6 +30,18 @@ def test_dialog_cancel_buttons_do_not_submit_forms(client):
     assert 'button.closest(\'dialog\').close()' in client.get("/static/app.js").get_data(as_text=True)
 
 
+def test_static_icon_buttons_use_entities_instead_of_question_marks(client):
+    html = client.get("/").get_data(as_text=True)
+
+    assert ">?<" not in html
+    assert "Automat - Browser Studio" in html
+    assert html.count("&#9881;") >= 4
+    assert "&#9658;" in html
+    assert "&#10074;&#10074;" in html
+    assert "&#9632;" in html
+    assert "&#43; Add action" in html
+
+
 def test_browser_internal_url_cannot_replace_address_input(client):
     javascript = client.get("/static/app.js").get_data(as_text=True)
     assert '/^https?:\\/\\//i.test(b.url||"")' in javascript
