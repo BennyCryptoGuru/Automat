@@ -13,6 +13,8 @@ DATABASE = ROOT / "data" / "automat.db"
 APP_URL = "http://127.0.0.1:5000/api/settings"
 MUTEX_NAME = "Local\\AutomatAutorunWatchdog"
 LOG_PATH = ROOT / "data" / "watchdog.log"
+UPDATE_LOCK = ROOT / "data" / "update.lock"
+STALE_UPDATE_LOCK_SECONDS = 3600
 
 
 def log(message):
@@ -47,6 +49,23 @@ def autorun_enabled():
         return False
 
 
+def update_in_progress():
+    if not UPDATE_LOCK.exists():
+        return False
+    try:
+        age = time.time() - UPDATE_LOCK.stat().st_mtime
+    except OSError:
+        return False
+    if age > STALE_UPDATE_LOCK_SECONDS:
+        log("Ignoring stale update lock.")
+        try:
+            UPDATE_LOCK.unlink()
+        except OSError:
+            pass
+        return False
+    return True
+
+
 def server_alive():
     try:
         with urllib.request.urlopen(APP_URL, timeout=2) as response:
@@ -77,6 +96,9 @@ def main():
         return
     log("Watchdog is running. It starts the program only when Autorun is enabled.")
     while True:
+        if update_in_progress():
+            time.sleep(5)
+            continue
         if autorun_enabled() and not server_alive():
             log("Autorun is enabled and the server is not running. Starting Automat.")
             start_server()

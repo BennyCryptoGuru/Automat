@@ -13,9 +13,20 @@ if ([string]::IsNullOrWhiteSpace($TargetPath)) {
     $TargetPath = (Resolve-Path -LiteralPath (Join-Path $ScriptPath "..")).Path
 }
 $TargetPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($TargetPath)
+$UpdateLockPath = Join-Path $TargetPath "data\update.lock"
 
 function Write-Step([string]$Message) {
     Write-Host "`n==> $Message" -ForegroundColor Cyan
+}
+
+function Set-UpdateLock {
+    $lockDir = Split-Path -Parent $UpdateLockPath
+    New-Item -ItemType Directory -Force -Path $lockDir | Out-Null
+    Set-Content -LiteralPath $UpdateLockPath -Value (Get-Date -Format o) -Encoding UTF8
+}
+
+function Clear-UpdateLock {
+    Remove-Item -LiteralPath $UpdateLockPath -Force -ErrorAction SilentlyContinue
 }
 
 function Remove-DirectoryInside([string]$Root, [string]$Path) {
@@ -36,12 +47,14 @@ function Get-AutomatProcessIds {
     } catch {
     }
     $escapedTarget = [regex]::Escape($TargetPath)
+    $escapedRunPy = [regex]::Escape((Join-Path $TargetPath "run.py"))
     $ids += Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
         Where-Object {
             $_.CommandLine -and (
-                $_.CommandLine -match $escapedTarget -or
-                $_.CommandLine -match "AutomatBrowserStudio" -or
-                ($_.CommandLine -match "run\.py" -and $_.Name -match "python")
+                $_.Name -match "python" -and (
+                    $_.CommandLine -match $escapedRunPy -or
+                    ($_.CommandLine -match "run\.py" -and $_.CommandLine -match $escapedTarget)
+                )
             )
         } |
         Select-Object -ExpandProperty ProcessId
@@ -209,6 +222,8 @@ $temporaryRoot = Join-Path $env:TEMP ("Automat-update-" + [guid]::NewGuid().ToSt
 New-Item -ItemType Directory -Force -Path $temporaryRoot | Out-Null
 
 try {
+    Set-UpdateLock
+
     Write-Step "Stopping running Automat"
     Stop-AutomatIfRunning
 
@@ -231,5 +246,6 @@ try {
     Write-Host "The database, screenshots, logs, and browser-independent local data in data were preserved."
     Start-AutomatAfterUpdate
 } finally {
+    Clear-UpdateLock
     Remove-Item -LiteralPath $temporaryRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

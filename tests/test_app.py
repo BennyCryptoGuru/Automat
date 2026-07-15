@@ -213,6 +213,7 @@ def test_stealth_recovery_helper_is_available():
 def test_update_script_downloads_from_github_and_preserves_local_data():
     root = Path(__file__).resolve().parents[1]
     text = (root / "scripts" / "update.ps1").read_text(encoding="utf-8")
+    watchdog = (root / "scripts" / "watchdog.py").read_text(encoding="utf-8")
 
     assert "https://github.com/$RepoOwner/$RepoName/archive/refs/heads/$Branch.zip" in text
     assert "Invoke-WebRequest" in text
@@ -223,6 +224,11 @@ def test_update_script_downloads_from_github_and_preserves_local_data():
     assert "Automat will use visible mode unless Stealth run is enabled in settings." in text
     assert "production version" in text
     assert "produkcni verze" in text
+    assert "data\\update.lock" in text
+    assert "Set-UpdateLock" in text
+    assert "Clear-UpdateLock" in text
+    assert "update_in_progress" in watchdog
+    assert "UPDATE_LOCK" in watchdog
 
 
 def test_start_scripts_default_visible_and_stealth_only_when_enabled():
