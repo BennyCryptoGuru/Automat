@@ -260,6 +260,8 @@ def test_manual_launchers_stay_in_root_and_helpers_live_in_scripts():
         "disable_stealth_run.bat",
         "add_watchdog_to_startup.bat",
         "remove_watchdog_from_startup.bat",
+        "start_watchdog.bat",
+        "stop_watchdog.bat",
     }
     helper_files = {
         "install.ps1",
@@ -272,6 +274,8 @@ def test_manual_launchers_stay_in_root_and_helpers_live_in_scripts():
         "watchdog.py",
         "watchdog_hidden.ps1",
         "watchdog_hidden.vbs",
+        "start_watchdog.ps1",
+        "stop_watchdog.ps1",
     }
 
     for launcher in manual_launchers:
@@ -279,6 +283,26 @@ def test_manual_launchers_stay_in_root_and_helpers_live_in_scripts():
     for helper in helper_files:
         assert not (root / helper).exists()
         assert (root / "scripts" / helper).exists()
+
+
+def test_manual_watchdog_scripts_can_start_and_stop_only_watchdog():
+    root = Path(__file__).resolve().parents[1]
+    start_batch = (root / "start_watchdog.bat").read_text(encoding="utf-8")
+    stop_batch = (root / "stop_watchdog.bat").read_text(encoding="utf-8")
+    start_script = (root / "scripts" / "start_watchdog.ps1").read_text(encoding="utf-8")
+    stop_script = (root / "scripts" / "stop_watchdog.ps1").read_text(encoding="utf-8")
+    update_script = (root / "scripts" / "update.ps1").read_text(encoding="utf-8")
+
+    assert "scripts\\start_watchdog.ps1" in start_batch
+    assert "scripts\\stop_watchdog.ps1" in stop_batch
+    assert "watchdog.py" in start_script
+    assert "pythonw.exe" in start_script
+    assert "Watchdog start requested" in start_script
+    assert "watchdog\\.py" in stop_script
+    assert "watchdog_hidden\\.ps1" in stop_script
+    assert "Stop-Process" in stop_script
+    assert "start_watchdog.bat" in update_script
+    assert "stop_watchdog.bat" in update_script
 
 
 def test_runner_controls_are_enabled_only_for_valid_state(client):
