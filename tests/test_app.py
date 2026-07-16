@@ -728,6 +728,8 @@ def test_action_clipboard_and_gear_menus_are_connected(client):
     assert 'id="actionContextMenu"' in html
     assert 'id="contextPasteBefore"' in html
     assert 'id="contextPasteAfter"' in html
+    assert 'id="contextDeleteActions"' in html
+    assert "Delete selected" in html
     assert 'id="actionDialogTitle"' in html
     assert 'id="credentialDialogTitle"' in html
     assert 'id="importElements"' in html
@@ -741,6 +743,11 @@ def test_action_clipboard_and_gear_menus_are_connected(client):
     assert 'key==="v"' in javascript
     assert 'key==="Enter"' in javascript
     assert "showActionContextMenu" in javascript
+    assert "deleteActions" in javascript
+    assert "contextDeleteActions" in javascript
+    assert "Delete selected actions" in javascript
+    assert "Actions deleted" in javascript
+    assert '"Delete selected":"Odstranit ozna\\u010den\\u00e9"' in javascript
     assert "insert-before" in javascript
     assert "/api/elements/import" in javascript
     assert "/api/elements/export" in javascript

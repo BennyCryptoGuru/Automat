@@ -109,6 +109,8 @@ button, select, input, textarea { font: inherit; }
 .action-context-menu[hidden] { display: none; }
 .action-context-menu button { width: 100%; display: flex; justify-content: space-between; gap: 8px; padding: 9px 10px; border: 0; border-radius: 7px; background: transparent; color: #414a56; text-align: left; font-size: 11px; cursor: pointer; }
 .action-context-menu button:hover { background: #f4f2ff; color: var(--violet); }
+.action-context-menu button.danger { color: var(--red); }
+.action-context-menu button.danger:hover { background: #fff0f2; color: var(--red); }
 .action-context-menu button:disabled { color: #b0b5bc; cursor: not-allowed; background: transparent; }
 .action-context-menu kbd { color: #969ca5; font-size: 9px; font-family: inherit; }
 .primary, .secondary, .find-button { border: 0; border-radius: 9px; padding: 10px 16px; font-weight: 700; font-size: 13px; cursor: pointer; }
