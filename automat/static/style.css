@@ -45,6 +45,9 @@ button, select, input, textarea { font: inherit; }
 .tabs button.active { color: var(--violet); border-color: var(--violet); }
 .tab-panel { display: none; flex: 1; min-height: 0; padding: 22px 18px; overflow: auto; }
 .tab-panel.active { display: flex; flex-direction: column; }
+.workflow-panel { overflow: hidden; }
+.workflow-panel .actions-list { min-height: 0; overflow: auto; padding-right: 2px; }
+.workflow-panel #addAction { flex: 0 0 auto; }
 .section-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .section-heading small, .eyebrow { font-size: 10px; letter-spacing: .13em; color: #959ca6; font-weight: 750; }
 .section-heading select { display: block; border: 0; background: transparent; font-weight: 700; margin-top: 4px; max-width: 190px; outline: 0; }
@@ -118,8 +121,10 @@ button, select, input, textarea { font: inherit; }
 .credential-extra-row label { margin: 0; font-size: 9px; }
 .credential-extra-row input, .credential-extra-row select { margin-top: 4px; padding: 7px; font-size: 11px; }
 .credential-extra-row .item-delete { align-self: center; margin-top: 15px; }
-.site-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; display: flex; align-items: flex-start; gap: 8px; }
+.site-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; display: flex; align-items: flex-start; gap: 8px; transition: border-color .15s, background .15s, box-shadow .15s; }
+.site-card.loading { border-color: #c8bdf8; background: #f7f4ff; animation: siteLoadingFlash 1s ease-in-out infinite; cursor: wait; }
 .site-card-copy { min-width: 0; flex: 1; }
+.site-loading { display: inline-flex; align-items: center; width: max-content; margin-top: 7px; padding: 4px 7px; border-radius: 999px; background: #ebe6ff; color: var(--violet); font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .credential-actions { display: flex; align-items: center; gap: 4px; }
 .credential-actions button:not(.item-delete) { border: 0; border-radius: 6px; padding: 5px 7px; background: #f0edff; color: var(--violet); font-size: 9px; font-weight: 750; cursor: pointer; }
 .credential-actions button:not(.item-delete):hover { background: #e5e0ff; }
@@ -204,12 +209,17 @@ form textarea { resize: vertical; }
 .toast.error { background: #a93447; }
 .toast.success { background: #087a60; box-shadow: 0 12px 34px rgba(8, 122, 96, .24); }
 @keyframes toastIn { from { transform: translateY(8px); opacity: 0; } }
+@keyframes siteLoadingFlash {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(113, 88, 226, .05); }
+  50% { box-shadow: 0 0 0 4px rgba(113, 88, 226, .13); }
+}
 @keyframes runningGlow {
   0%, 100% { opacity: .72; transform: scale(.85); box-shadow: 0 0 0 3px rgba(25, 201, 155, .12), 0 0 7px rgba(25, 201, 155, .35); }
   50% { opacity: 1; transform: scale(1.16); box-shadow: 0 0 0 7px rgba(25, 201, 155, .16), 0 0 15px rgba(25, 201, 155, .8); }
 }
 @media (prefers-reduced-motion: reduce) {
   .status-pill.running i { animation: none; box-shadow: 0 0 0 5px rgba(25, 201, 155, .16), 0 0 10px rgba(25, 201, 155, .55); }
+  .site-card.loading { animation: none; box-shadow: 0 0 0 4px rgba(113, 88, 226, .13); }
 }
 
 @media (max-width: 1050px) {

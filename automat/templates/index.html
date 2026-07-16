@@ -32,7 +32,7 @@
       <button class="active" data-tab="workflow">Actions</button>
       <button data-tab="library">Library</button>
     </nav>
-    <section id="workflowTab" class="tab-panel active">
+    <section id="workflowTab" class="tab-panel workflow-panel active">
       <div class="section-heading"><div><small>CURRENT WORKFLOW</small><select id="workflowSelect"><option value="">Select workflow</option></select></div><div class="heading-actions"><details class="tools-menu" id="workflowTools"><summary title="Workflow tools" aria-label="Workflow tools">&#9881;</summary><div class="tools-menu-popover"><button id="importWorkflow">Import workflow</button><button id="exportWorkflow" hidden>Export workflow</button></div><input id="workflowImportFile" type="file" accept=".json,.automat.json,application/json" hidden></details><button id="deleteWorkflow" class="item-delete header-delete" title="Delete workflow" aria-label="Delete workflow" hidden>&#215;</button><button id="newWorkflow" class="add" title="New workflow">&#43;</button></div></div>
       <div class="action-clipboard" id="actionClipboard"><button id="selectAllActions">Select all</button><span id="insertPositionLabel">Insert at end</span><button id="copyActions" disabled>Copy</button><button id="pasteActions" disabled>Paste</button></div>
       <div id="actionsList" class="actions-list empty-state"><p>No actions yet</p><span>Create a workflow and add the first step.</span></div>

@@ -52,6 +52,30 @@ def test_browser_internal_url_cannot_replace_address_input(client):
     assert 'const target=String(value||$("#urlInput").value).trim()' in javascript
 
 
+def test_saved_site_card_shows_loading_while_opening(client):
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    stylesheet = client.get("/static/style.css").get_data(as_text=True)
+
+    assert "openingSiteId:null" in javascript
+    assert "state.openingSiteId=site.id" in javascript
+    assert "state.openingSiteId=null" in javascript
+    assert "site-loading" in javascript
+    assert "Loading..." in javascript
+    assert ".site-card.loading" in stylesheet
+    assert "@keyframes siteLoadingFlash" in stylesheet
+
+
+def test_workflow_add_action_stays_outside_scrollable_action_list(client):
+    html = client.get("/").get_data(as_text=True)
+    stylesheet = client.get("/static/style.css").get_data(as_text=True)
+
+    assert 'id="workflowTab" class="tab-panel workflow-panel active"' in html
+    assert html.index('id="actionsList"') < html.index('id="addAction"')
+    assert ".workflow-panel { overflow: hidden; }" in stylesheet
+    assert ".workflow-panel .actions-list" in stylesheet
+    assert "overflow: auto" in stylesheet
+
+
 def test_status_poll_does_not_overlap(client):
     javascript = client.get("/static/app.js").get_data(as_text=True)
     assert "if(runnerPollRunning)return" in javascript
