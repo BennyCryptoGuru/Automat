@@ -38,6 +38,33 @@ PICKER_SCRIPT = r"""
   style.textContent = '.__automat-hover{outline:3px solid #7c5cff!important;outline-offset:2px!important;cursor:crosshair!important}';
   document.documentElement.appendChild(style);
   let hovered = null;
+  const xpathLiteral = (value) => {
+    value = String(value || '');
+    if (!value.includes('"')) return `"${value}"`;
+    if (!value.includes("'")) return `'${value}'`;
+    return 'concat("' + value.split('"').join('", \'"\', "') + '")';
+  };
+  const preferredAttributes = ['data-building','data-testid','data-test','data-id','aria-label','title','alt','href','value','role'];
+  const attributeLocators = (el) => {
+    const tag = el.tagName.toLowerCase();
+    const values = [];
+    for (const name of preferredAttributes) {
+      const value = el.getAttribute(name);
+      if (!value) continue;
+      values.push({
+        css: `${tag}[${CSS.escape(name)}="${CSS.escape(value)}"]`,
+        xpath: `//${tag}[@${name}=${xpathLiteral(value)}]`
+      });
+    }
+    for (const attr of [...el.attributes || []]) {
+      if (!attr.name.startsWith('data-') || !attr.value || preferredAttributes.includes(attr.name)) continue;
+      values.push({
+        css: `${tag}[${CSS.escape(attr.name)}="${CSS.escape(attr.value)}"]`,
+        xpath: `//${tag}[@${attr.name}=${xpathLiteral(attr.value)}]`
+      });
+    }
+    return values;
+  };
   const cssPath = (el) => {
     if (el.id) return '#' + CSS.escape(el.id);
     const parts = [];
@@ -75,14 +102,19 @@ PICKER_SCRIPT = r"""
     const nameValue=el.getAttribute('name')||'';
     const className=el.classList && el.classList.length ? el.classList[0] : '';
     const tagName=el.tagName.toLowerCase();
-    const cssLocator=cssPath(el);
-    const xpathLocator=xpath(el);
+    const attributeLocatorValues=attributeLocators(el);
+    const cssLocator=attributeLocatorValues[0]?.css || cssPath(el);
+    const xpathLocator=attributeLocatorValues[0]?.xpath || xpath(el);
     addAlternative('id', idValue);
     addAlternative('name', nameValue);
     addAlternative('class name', className);
     addAlternative('tag name', tagName);
     addAlternative('css selector', cssLocator);
+    for(const item of attributeLocatorValues.slice(1)) addAlternative('css selector', item.css);
     addAlternative('xpath', xpathLocator);
+    for(const item of attributeLocatorValues.slice(1)) addAlternative('xpath', item.xpath);
+    addAlternative('css selector', cssPath(el));
+    addAlternative('xpath', xpath(el));
     const link=el.closest('a');
     const linkText=link ? link.textContent.trim() : '';
     if(link && link.textContent.trim()) {

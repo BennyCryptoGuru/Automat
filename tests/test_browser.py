@@ -67,6 +67,9 @@ def test_picker_collects_all_supported_locator_alternatives():
     assert "addAlternative('css selector', cssLocator)" in PICKER_SCRIPT
     assert "addAlternative('xpath', xpathLocator)" in PICKER_SCRIPT
     assert "addAlternative('partial link text', linkText.slice(0,80))" in PICKER_SCRIPT
+    assert "'data-building'" in PICKER_SCRIPT
+    assert '`${tag}[${CSS.escape(name)}="${CSS.escape(value)}"]`' in PICKER_SCRIPT
+    assert "`//${tag}[@${name}=${xpathLiteral(value)}]`" in PICKER_SCRIPT
     assert "const link=el.closest('a')" in PICKER_SCRIPT
     assert "linkText:linkText.slice(0,160)" in PICKER_SCRIPT
     assert "addAlternative('select by value', optionValue)" in PICKER_SCRIPT
