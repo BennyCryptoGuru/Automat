@@ -402,12 +402,16 @@ def test_picker_click_count_setting_is_available(client):
     assert 'id="pickerClickCount"' in html
     assert 'title="Find object settings"' in html
     assert "Find on click" in html
+    assert "Earlier clicks pass through the page" in html
+    assert "dropdown menus or hidden elements" in html
     assert "automat_picker_click_count" in javascript
     assert "click_count:clickCount" in javascript
     assert 'post("/api/picker/start",{click_count:clickCount})' in javascript
     assert '"Find object settings":"Nastaven\\u00ed hled\\u00e1n\\u00ed objektu"' in javascript
     assert '"Find on click":"Naj\\u00edt na kliknut\\u00ed"' in javascript
+    assert "P\\u0159edchoz\\u00ed kliky projdou do str\\u00e1nky" in javascript
     assert ".picker-tools-popover" in stylesheet
+    assert ".picker-click-setting:hover .picker-help" in stylesheet
 
 
 def test_picker_start_accepts_click_count(client, monkeypatch):

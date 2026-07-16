@@ -66,6 +66,8 @@ button, select, input, textarea { font: inherit; }
 .picker-tools-popover label { display: block; margin: 0; color: #616a75; font-size: 10px; font-weight: 750; letter-spacing: .02em; }
 .picker-tools-popover input { width: 100%; height: 32px; margin-top: 6px; border: 1px solid var(--line); border-radius: 7px; padding: 0 8px; color: var(--ink); font-size: 12px; outline: 0; }
 .picker-tools-popover input:focus { border-color: #cfc7f6; box-shadow: 0 0 0 3px rgba(113, 88, 226, .1); }
+.picker-help { display: block; max-height: 0; margin-top: 0; padding: 0 8px; overflow: hidden; border-radius: 7px; background: #f7f4ff; color: #6b647f; font-size: 9px; font-weight: 600; line-height: 1.45; opacity: 0; transition: max-height .16s ease, margin-top .16s ease, padding .16s ease, opacity .16s ease; }
+.picker-click-setting:hover .picker-help, .picker-click-setting:focus-within .picker-help { max-height: 96px; margin-top: 7px; padding: 7px 8px; opacity: 1; }
 .item-tool { width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--violet); display: grid; place-items: center; font-size: 15px; cursor: pointer; }
 .item-tool:hover { border-color: #cfc7f6; background: #f6f4ff; }
 .item-tool[hidden] { display: none; }

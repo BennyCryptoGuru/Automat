@@ -15,6 +15,7 @@ Object.assign(translations.cs,{
 "Refind object":"Naj\u00edt objekt",
 "Find object settings":"Nastaven\u00ed hled\u00e1n\u00ed objektu",
 "Find on click":"Naj\u00edt na kliknut\u00ed",
+"Earlier clicks pass through the page and the object is saved only on the selected click. Useful for dropdown menus or hidden elements.":"P\u0159edchoz\u00ed kliky projdou do str\u00e1nky a objekt se ulo\u017e\u00ed a\u017e na nastaven\u00fd klik. Hod\u00ed se pro rozbalovac\u00ed menu nebo skryt\u00e9 prvky.",
 "Object locator refreshed":"Lok\u00e1tor objektu obnoven",
 "css selector - recommended":"css selector - doporu\u010deno","xpath - recommended":"xpath - doporu\u010deno",
 "Timeout seconds (0 = infinite)":"Timeout sekund (0 = nekone\u010dno)",
