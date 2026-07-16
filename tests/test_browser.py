@@ -76,9 +76,15 @@ def test_picker_collects_all_supported_locator_alternatives():
     assert "linkText:linkText.slice(0,160)" in PICKER_SCRIPT
     assert "addAlternative('select by value', optionValue)" in PICKER_SCRIPT
     assert "addAlternative('select by text', optionText)" in PICKER_SCRIPT
+    assert "const selectedOption = (el)" in PICKER_SCRIPT
+    assert "const optionXpath = (option)" in PICKER_SCRIPT
+    assert "`//*[@id=${JSON.stringify(parent.id)}]`" in PICKER_SCRIPT
+    assert "addAlternative('xpath', optionXpathLocator)" in PICKER_SCRIPT
+    assert "document.addEventListener('change',change,true)" in PICKER_SCRIPT
+    assert "if (requiredClicks <= 1) recordSelection(e.target)" in PICKER_SCRIPT
     assert "addAlternative('div text', divText)" in PICKER_SCRIPT
     assert "addAlternative('div partial text', divText.slice(0,80))" in PICKER_SCRIPT
-    assert "optionValue=el.tagName==='OPTION' ? el.value : ''" in PICKER_SCRIPT
+    assert "optionValue=optionElement ? optionElement.value : ''" in PICKER_SCRIPT
 
 
 def test_custom_locator_methods_build_xpath():

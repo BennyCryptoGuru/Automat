@@ -87,13 +87,35 @@ PICKER_SCRIPT = r"""
     }
     return '/' + parts.join('/');
   };
+  const selectedOption = (el) => el.tagName === 'SELECT' && el.selectedIndex >= 0 ? el.options[el.selectedIndex] : null;
+  const optionIndex = (option) => {
+    const parent = option.parentElement;
+    if (!parent) return 0;
+    return [...parent.children].filter(x => x.tagName === option.tagName).indexOf(option) + 1;
+  };
+  const optionCssPath = (option) => {
+    const parent = option.parentElement;
+    const index = optionIndex(option);
+    if (!parent || index < 1) return cssPath(option);
+    const parentPath = parent.id ? '#' + CSS.escape(parent.id) : cssPath(parent);
+    return `${parentPath} > option:nth-of-type(${index})`;
+  };
+  const optionXpath = (option) => {
+    const parent = option.parentElement;
+    const index = optionIndex(option);
+    if (!parent || index < 1) return xpath(option);
+    const parentPath = parent.id ? `//*[@id=${JSON.stringify(parent.id)}]` : xpath(parent);
+    return `${parentPath}/option[${index}]`;
+  };
   const over = e => { if (hovered) hovered.classList.remove('__automat-hover'); hovered=e.target; hovered.classList.add('__automat-hover'); e.stopPropagation(); };
   let clickCount = 0;
-  const click = e => {
-    clickCount += 1;
-    if (clickCount < requiredClicks) return;
-    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-    const el=e.target; el.classList.remove('__automat-hover');
+  const cleanup = () => {
+    document.removeEventListener('mouseover',over,true); document.removeEventListener('click',click,true); document.removeEventListener('change',change,true);
+    style.remove(); window.__automatPickerActive=false;
+  };
+  const recordSelection = el => {
+    if (hovered) hovered.classList.remove('__automat-hover');
+    if (el.classList) el.classList.remove('__automat-hover');
     const rect=el.getBoundingClientRect();
     const alternatives=[];
     const addAlternative=(strategy,locator)=>{
@@ -105,10 +127,21 @@ PICKER_SCRIPT = r"""
     const idValue=el.id||'';
     const nameValue=el.getAttribute('name')||'';
     const className=el.classList && el.classList.length ? el.classList[0] : '';
-    const tagName=el.tagName.toLowerCase();
+    const optionElement=el.tagName==='OPTION' ? el : selectedOption(el);
+    const optionValue=optionElement ? optionElement.value : '';
+    const optionText=optionElement ? optionElement.textContent.trim() : '';
+    const optionCssLocator=optionElement ? optionCssPath(optionElement) : '';
+    const optionXpathLocator=optionElement ? optionXpath(optionElement) : '';
+    const tagName=optionElement && el.tagName==='SELECT' ? 'option' : el.tagName.toLowerCase();
     const attributeLocatorValues=attributeLocators(el);
-    const cssLocator=attributeLocatorValues[0]?.css || cssPath(el);
-    const xpathLocator=attributeLocatorValues[0]?.xpath || xpath(el);
+    const cssLocator=optionElement && el.tagName==='SELECT' ? optionCssLocator : (attributeLocatorValues[0]?.css || cssPath(el));
+    const xpathLocator=optionElement && el.tagName==='SELECT' ? optionXpathLocator : (attributeLocatorValues[0]?.xpath || xpath(el));
+    if(optionElement) {
+      addAlternative('select by value', optionValue);
+      addAlternative('select by text', optionText);
+      addAlternative('xpath', optionXpathLocator);
+      addAlternative('css selector', optionCssLocator);
+    }
     addAlternative('id', idValue);
     addAlternative('name', nameValue);
     addAlternative('class name', className);
@@ -125,18 +158,12 @@ PICKER_SCRIPT = r"""
       addAlternative('link text', linkText);
       addAlternative('partial link text', linkText.slice(0,80));
     }
-    const optionValue=el.tagName==='OPTION' ? el.value : '';
-    const optionText=el.tagName==='OPTION' ? el.textContent.trim() : '';
-    if(el.tagName==='OPTION') {
-      addAlternative('select by value', optionValue);
-      addAlternative('select by text', optionText);
-    }
     const divText=el.tagName==='DIV' ? el.textContent.trim() : '';
     if(el.tagName==='DIV' && el.textContent.trim()) {
       addAlternative('div text', divText);
       addAlternative('div partial text', divText.slice(0,80));
     }
-    const elementText=(el.innerText||el.value||el.textContent||'').trim().slice(0,160);
+    const elementText=(optionElement && el.tagName==='SELECT' ? optionText : (el.innerText||el.value||el.textContent||'')).trim().slice(0,160);
     window.__automatSelection={
       strategy: alternatives[0].strategy, locator: alternatives[0].locator, alternatives,
       tag:tagName, text:elementText, idValue, nameValue, className, cssLocator, xpathLocator,
@@ -145,10 +172,23 @@ PICKER_SCRIPT = r"""
       title:el.getAttribute('title')||'', ariaLabel:el.getAttribute('aria-label')||'',
       rect:{x:Math.round(rect.x),y:Math.round(rect.y),width:Math.round(rect.width),height:Math.round(rect.height)}
     };
-    document.removeEventListener('mouseover',over,true); document.removeEventListener('click',click,true);
-    style.remove(); window.__automatPickerActive=false;
+    cleanup();
   };
-  document.addEventListener('mouseover',over,true); document.addEventListener('click',click,true);
+  const click = e => {
+    clickCount += 1;
+    if (clickCount < requiredClicks) return;
+    if (e.target.tagName === 'SELECT') {
+      if (requiredClicks <= 1) recordSelection(e.target);
+      return;
+    }
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    recordSelection(e.target);
+  };
+  const change = e => {
+    if (e.target.tagName !== 'SELECT' || clickCount < requiredClicks - 1) return;
+    recordSelection(e.target);
+  };
+  document.addEventListener('mouseover',over,true); document.addEventListener('click',click,true); document.addEventListener('change',change,true);
 })();
 """
 
