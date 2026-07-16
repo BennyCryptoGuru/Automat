@@ -33,6 +33,7 @@ PICKER_SCRIPT = r"""
   if (window.__automatPickerActive) return;
   window.__automatPickerActive = true;
   window.__automatSelection = null;
+  const requiredClicks = Math.max(1, Math.floor(Number(arguments[0] || 1)) || 1);
   const style = document.createElement('style');
   style.id = '__automat_picker_style';
   style.textContent = '.__automat-hover{outline:3px solid #7c5cff!important;outline-offset:2px!important;cursor:crosshair!important}';
@@ -87,7 +88,10 @@ PICKER_SCRIPT = r"""
     return '/' + parts.join('/');
   };
   const over = e => { if (hovered) hovered.classList.remove('__automat-hover'); hovered=e.target; hovered.classList.add('__automat-hover'); e.stopPropagation(); };
+  let clickCount = 0;
   const click = e => {
+    clickCount += 1;
+    if (clickCount < requiredClicks) return;
     e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
     const el=e.target; el.classList.remove('__automat-hover');
     const rect=el.getBoundingClientRect();
@@ -328,9 +332,14 @@ class BrowserManager:
                 self.start()
             return self.driver
 
-    def begin_picker(self):
+    def begin_picker(self, click_count=1):
+        try:
+            click_count = int(click_count or 1)
+        except (TypeError, ValueError):
+            click_count = 1
+        click_count = max(1, click_count)
         with self.lock:
-            self.require().execute_script(PICKER_SCRIPT)
+            self.require().execute_script(PICKER_SCRIPT, click_count)
 
     def picker_result(self):
         with self.lock:

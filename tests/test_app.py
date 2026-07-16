@@ -393,6 +393,34 @@ def test_saved_element_has_edit_control(client):
     assert '"div partial text":"div část textu"' in javascript
 
 
+def test_picker_click_count_setting_is_available(client):
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+    html = client.get("/").get_data(as_text=True)
+    stylesheet = client.get("/static/style.css").get_data(as_text=True)
+
+    assert 'id="pickerTools"' in html
+    assert 'id="pickerClickCount"' in html
+    assert 'title="Find object settings"' in html
+    assert "Find on click" in html
+    assert "automat_picker_click_count" in javascript
+    assert "click_count:clickCount" in javascript
+    assert 'post("/api/picker/start",{click_count:clickCount})' in javascript
+    assert '"Find object settings":"Nastaven\\u00ed hled\\u00e1n\\u00ed objektu"' in javascript
+    assert '"Find on click":"Naj\\u00edt na kliknut\\u00ed"' in javascript
+    assert ".picker-tools-popover" in stylesheet
+
+
+def test_picker_start_accepts_click_count(client, monkeypatch):
+    calls = []
+    browser = client.application.extensions["automat_browser"]
+    monkeypatch.setattr(browser, "begin_picker", lambda click_count=1: calls.append(click_count))
+
+    data = client.post("/api/picker/start", json={"click_count": 2}).get_json()["data"]
+
+    assert calls == [2]
+    assert data == {"active": True, "click_count": 2}
+
+
 def test_dynamic_select_options_have_translatable_labels(client):
     javascript = client.get("/static/app.js").get_data(as_text=True)
 

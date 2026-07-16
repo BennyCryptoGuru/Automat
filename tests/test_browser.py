@@ -60,6 +60,8 @@ def test_browser_candidates_are_chrome_only(tmp_path, monkeypatch):
 
 
 def test_picker_collects_all_supported_locator_alternatives():
+    assert "requiredClicks" in PICKER_SCRIPT
+    assert "clickCount < requiredClicks" in PICKER_SCRIPT
     assert "addAlternative('id', idValue)" in PICKER_SCRIPT
     assert "addAlternative('name', nameValue)" in PICKER_SCRIPT
     assert "addAlternative('class name', className)" in PICKER_SCRIPT

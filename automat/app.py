@@ -284,8 +284,14 @@ def create_app(test_config=None):
 
     @app.post("/api/picker/start")
     def picker_start():
-        browser.begin_picker()
-        return ok({"active": True})
+        p = payload()
+        click_count = p.get("click_count", 1)
+        browser.begin_picker(click_count)
+        try:
+            click_count = max(1, int(click_count or 1))
+        except (TypeError, ValueError):
+            click_count = 1
+        return ok({"active": True, "click_count": click_count})
 
     @app.get("/api/picker/result")
     def picker_result():
