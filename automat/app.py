@@ -104,6 +104,27 @@ def create_app(test_config=None):
 
     browser.set_stealth_run(settings_payload()["stealth_run"])
 
+    def normalize_element_alternatives(strategy, locator, raw_alternatives):
+        values = []
+        seen = set()
+
+        def add(item_strategy, item_locator):
+            item_locator = str(item_locator or "").strip()
+            if item_strategy not in LOCATOR_STRATEGIES or not item_locator:
+                return
+            key = (item_strategy, item_locator)
+            if key in seen:
+                return
+            seen.add(key)
+            values.append({"strategy": item_strategy, "locator": item_locator})
+
+        add(strategy, locator)
+        if isinstance(raw_alternatives, list):
+            for item in raw_alternatives:
+                if isinstance(item, dict):
+                    add(item.get("strategy"), item.get("locator"))
+        return values
+
     def normalize_credential_actions(raw_actions):
         raw_actions = raw_actions or []
         if not isinstance(raw_actions, list) or len(raw_actions) > 100:
@@ -277,9 +298,10 @@ def create_app(test_config=None):
             raise ValueError("Invalid locator strategy")
         if not p.get("name") or not p.get("locator"):
             raise ValueError("Name and locator are required")
+        alternatives = normalize_element_alternatives(p["strategy"], p["locator"], p.get("alternatives", []))
         element_id = db.execute(
             "INSERT INTO elements(site_id,name,strategy,locator,alternatives,frame_path,parent_id,metadata) VALUES(?,?,?,?,?,?,?,?)",
-            (p.get("site_id"), p["name"].strip(), p["strategy"], p["locator"], json.dumps(p.get("alternatives", [])), json.dumps(p.get("frame_path", [])), p.get("parent_id"), json.dumps(p.get("metadata", {}))),
+            (p.get("site_id"), p["name"].strip(), p["strategy"], p["locator"], json.dumps(alternatives), json.dumps(p.get("frame_path", [])), p.get("parent_id"), json.dumps(p.get("metadata", {}))),
         )
         preview = None
         if p.get("capture_preview", True):
@@ -386,7 +408,11 @@ def create_app(test_config=None):
             raise ValueError("Invalid locator strategy")
         if not str(p.get("name", "")).strip() or not str(p.get("locator", "")).strip():
             raise ValueError("Name and locator are required")
-        db.execute("UPDATE elements SET site_id=?,name=?,strategy=?,locator=?,parent_id=? WHERE id=?", (p.get("site_id"), p["name"], p["strategy"], p["locator"], p.get("parent_id"), item_id))
+        alternatives = normalize_element_alternatives(p["strategy"], p["locator"], p.get("alternatives", []))
+        db.execute(
+            "UPDATE elements SET site_id=?,name=?,strategy=?,locator=?,alternatives=?,parent_id=?,metadata=? WHERE id=?",
+            (p.get("site_id"), p["name"], p["strategy"], p["locator"], json.dumps(alternatives), p.get("parent_id"), json.dumps(p.get("metadata", {})), item_id),
+        )
         return ok(db.one("SELECT * FROM elements WHERE id=?", (item_id,)))
 
     @app.delete("/api/elements/<int:item_id>")

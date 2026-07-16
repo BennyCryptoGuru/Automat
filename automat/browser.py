@@ -65,32 +65,47 @@ PICKER_SCRIPT = r"""
     const el=e.target; el.classList.remove('__automat-hover');
     const rect=el.getBoundingClientRect();
     const alternatives=[];
-    if(el.id) alternatives.push({strategy:'id', locator:el.id});
-    if(el.getAttribute('name')) alternatives.push({strategy:'name', locator:el.getAttribute('name')});
-    if(el.classList && el.classList.length) alternatives.push({strategy:'class name', locator:el.classList[0]});
-    alternatives.push({strategy:'tag name', locator:el.tagName.toLowerCase()});
-    alternatives.push({strategy:'css selector', locator:cssPath(el)});
-    alternatives.push({strategy:'xpath', locator:xpath(el)});
+    const addAlternative=(strategy,locator)=>{
+      locator=String(locator||'').trim();
+      if(!locator) return;
+      if(alternatives.some(item=>item.strategy===strategy && item.locator===locator)) return;
+      alternatives.push({strategy, locator});
+    };
+    const idValue=el.id||'';
+    const nameValue=el.getAttribute('name')||'';
+    const className=el.classList && el.classList.length ? el.classList[0] : '';
+    const tagName=el.tagName.toLowerCase();
+    const cssLocator=cssPath(el);
+    const xpathLocator=xpath(el);
+    addAlternative('id', idValue);
+    addAlternative('name', nameValue);
+    addAlternative('class name', className);
+    addAlternative('tag name', tagName);
+    addAlternative('css selector', cssLocator);
+    addAlternative('xpath', xpathLocator);
     const link=el.closest('a');
+    const linkText=link ? link.textContent.trim() : '';
     if(link && link.textContent.trim()) {
-      const linkText=link.textContent.trim();
-      alternatives.push({strategy:'link text', locator:linkText});
-      alternatives.push({strategy:'partial link text', locator:linkText.slice(0,80)});
+      addAlternative('link text', linkText);
+      addAlternative('partial link text', linkText.slice(0,80));
     }
+    const optionValue=el.tagName==='OPTION' ? el.value : '';
+    const optionText=el.tagName==='OPTION' ? el.textContent.trim() : '';
     if(el.tagName==='OPTION') {
-      if(el.value) alternatives.push({strategy:'select by value', locator:el.value});
-      if(el.textContent.trim()) alternatives.push({strategy:'select by text', locator:el.textContent.trim()});
+      addAlternative('select by value', optionValue);
+      addAlternative('select by text', optionText);
     }
+    const divText=el.tagName==='DIV' ? el.textContent.trim() : '';
     if(el.tagName==='DIV' && el.textContent.trim()) {
-      const divText=el.textContent.trim();
-      alternatives.push({strategy:'div text', locator:divText});
-      alternatives.push({strategy:'div partial text', locator:divText.slice(0,80)});
+      addAlternative('div text', divText);
+      addAlternative('div partial text', divText.slice(0,80));
     }
+    const elementText=(el.innerText||el.value||el.textContent||'').trim().slice(0,160);
     window.__automatSelection={
       strategy: alternatives[0].strategy, locator: alternatives[0].locator, alternatives,
-      tag:el.tagName.toLowerCase(), text:(el.innerText||el.value||'').trim().slice(0,160),
-      linkText:link ? link.textContent.trim().slice(0,160) : '',
-      optionValue:el.tagName==='OPTION' ? el.value : '',
+      tag:tagName, text:elementText, idValue, nameValue, className, cssLocator, xpathLocator,
+      linkText:linkText.slice(0,160), optionValue, optionText:optionText.slice(0,160),
+      divText:divText.slice(0,160),
       title:el.getAttribute('title')||'', ariaLabel:el.getAttribute('aria-label')||'',
       rect:{x:Math.round(rect.x),y:Math.round(rect.y),width:Math.round(rect.width),height:Math.round(rect.height)}
     };

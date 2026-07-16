@@ -668,3 +668,27 @@ def test_custom_locator_methods_can_be_saved(client):
 
     assert element["strategy"] == "select by value"
     assert element["locator"] == "int82"
+
+
+def test_element_update_preserves_locator_alternatives_and_metadata(client):
+    element = client.post("/api/elements", json={
+        "name": "Link", "strategy": "css selector", "locator": "a.docs", "capture_preview": False,
+        "alternatives": [{"strategy": "link text", "locator": "Documentation"}],
+    }).get_json()["data"]
+
+    updated = client.put(f"/api/elements/{element['id']}", json={
+        "name": "Updated link", "site_id": None, "parent_id": None,
+        "strategy": "xpath", "locator": "//a[@id='docs']",
+        "alternatives": [
+            {"strategy": "id", "locator": "docs"},
+            {"strategy": "name", "locator": "documentation"},
+            {"strategy": "select by value", "locator": "int82"},
+        ],
+        "metadata": {"idValue": "docs", "nameValue": "documentation"},
+    }).get_json()["data"]
+
+    assert {"strategy": "xpath", "locator": "//a[@id='docs']"} in updated["alternatives"]
+    assert {"strategy": "id", "locator": "docs"} in updated["alternatives"]
+    assert {"strategy": "name", "locator": "documentation"} in updated["alternatives"]
+    assert {"strategy": "select by value", "locator": "int82"} in updated["alternatives"]
+    assert updated["metadata"]["idValue"] == "docs"

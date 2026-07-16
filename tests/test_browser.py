@@ -60,18 +60,20 @@ def test_browser_candidates_are_chrome_only(tmp_path, monkeypatch):
 
 
 def test_picker_collects_all_supported_locator_alternatives():
-    assert "strategy:'class name'" in PICKER_SCRIPT
-    assert "strategy:'tag name'" in PICKER_SCRIPT
-    assert "strategy:'css selector'" in PICKER_SCRIPT
-    assert "strategy:'xpath'" in PICKER_SCRIPT
-    assert "strategy:'partial link text'" in PICKER_SCRIPT
+    assert "addAlternative('id', idValue)" in PICKER_SCRIPT
+    assert "addAlternative('name', nameValue)" in PICKER_SCRIPT
+    assert "addAlternative('class name', className)" in PICKER_SCRIPT
+    assert "addAlternative('tag name', tagName)" in PICKER_SCRIPT
+    assert "addAlternative('css selector', cssLocator)" in PICKER_SCRIPT
+    assert "addAlternative('xpath', xpathLocator)" in PICKER_SCRIPT
+    assert "addAlternative('partial link text', linkText.slice(0,80))" in PICKER_SCRIPT
     assert "const link=el.closest('a')" in PICKER_SCRIPT
-    assert "linkText:link ? link.textContent.trim().slice(0,160) : ''" in PICKER_SCRIPT
-    assert "strategy:'select by value'" in PICKER_SCRIPT
-    assert "strategy:'select by text'" in PICKER_SCRIPT
-    assert "strategy:'div text'" in PICKER_SCRIPT
-    assert "strategy:'div partial text'" in PICKER_SCRIPT
-    assert "optionValue:el.tagName==='OPTION' ? el.value : ''" in PICKER_SCRIPT
+    assert "linkText:linkText.slice(0,160)" in PICKER_SCRIPT
+    assert "addAlternative('select by value', optionValue)" in PICKER_SCRIPT
+    assert "addAlternative('select by text', optionText)" in PICKER_SCRIPT
+    assert "addAlternative('div text', divText)" in PICKER_SCRIPT
+    assert "addAlternative('div partial text', divText.slice(0,80))" in PICKER_SCRIPT
+    assert "optionValue=el.tagName==='OPTION' ? el.value : ''" in PICKER_SCRIPT
 
 
 def test_custom_locator_methods_build_xpath():
