@@ -413,6 +413,13 @@ def create_app(test_config=None):
             "UPDATE elements SET site_id=?,name=?,strategy=?,locator=?,alternatives=?,parent_id=?,metadata=? WHERE id=?",
             (p.get("site_id"), p["name"], p["strategy"], p["locator"], json.dumps(alternatives), p.get("parent_id"), json.dumps(p.get("metadata", {})), item_id),
         )
+        if p.get("capture_preview"):
+            try:
+                filename = f"element-{item_id}.png"
+                browser.capture_selected(p, filename)
+                db.execute("UPDATE elements SET preview_path=? WHERE id=?", (f"/screenshots/{filename}", item_id))
+            except Exception:
+                pass
         return ok(db.one("SELECT * FROM elements WHERE id=?", (item_id,)))
 
     @app.delete("/api/elements/<int:item_id>")

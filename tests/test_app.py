@@ -372,6 +372,11 @@ def test_saved_element_has_edit_control(client):
     html = client.get("/").get_data(as_text=True)
     assert "data-edit-element" in javascript
     assert "openEditElement" in javascript
+    assert 'id="refindElement"' in html
+    assert "beginPicker(true)" in javascript
+    assert "applyElementSelectionToForm" in javascript
+    assert "capture_preview=state.refoundElement" in javascript
+    assert '"Refind object":"Naj\\u00edt objekt"' in javascript
     assert "syncElementLocatorFromStrategy" in javascript
     assert "locatorFallbackForStrategy" in javascript
     assert 'strategy==="partial link text"' in javascript
@@ -742,3 +747,25 @@ def test_element_update_preserves_locator_alternatives_and_metadata(client):
     assert {"strategy": "name", "locator": "documentation"} in updated["alternatives"]
     assert {"strategy": "select by value", "locator": "int82"} in updated["alternatives"]
     assert updated["metadata"]["idValue"] == "docs"
+
+
+def test_element_update_can_refresh_preview_after_refind(client, monkeypatch):
+    element = client.post("/api/elements", json={
+        "name": "Preview refresh", "strategy": "css selector", "locator": ".old", "capture_preview": False,
+    }).get_json()["data"]
+    browser = client.application.extensions["automat_browser"]
+
+    def capture(selection, filename):
+        assert selection["locator"] == ".new"
+        (browser.screenshot_dir / filename).write_bytes(b"new preview")
+
+    monkeypatch.setattr(browser, "capture_selected", capture)
+    updated = client.put(f"/api/elements/{element['id']}", json={
+        "name": "Preview refresh", "site_id": None, "parent_id": None,
+        "strategy": "css selector", "locator": ".new", "capture_preview": True,
+        "alternatives": [{"strategy": "css selector", "locator": ".new"}],
+        "metadata": {"tag": "button"},
+    }).get_json()["data"]
+
+    assert updated["preview_path"] == f"/screenshots/element-{element['id']}.png"
+    assert (browser.screenshot_dir / f"element-{element['id']}.png").read_bytes() == b"new preview"

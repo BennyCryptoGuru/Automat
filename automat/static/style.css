@@ -198,6 +198,7 @@ dialog form { padding: 24px; }
 .preview-placeholder img { width: 100%; height: 100%; object-fit: contain; border-radius: 7px; }
 .selection-preview strong { font-size: 11px; text-transform: uppercase; color: var(--violet); display: block; }
 .selection-preview span { font-size: 11px; color: var(--muted); display: block; margin-top: 4px; }
+.refind-button { margin-top: 9px; padding: 6px 9px; font-size: 10px; }
 .modal-head + label, form label { display: block; font-size: 11px; color: #616a75; font-weight: 650; margin-bottom: 13px; }
 form input, form select, form textarea { display: block; width: 100%; border: 1px solid #dfe2e6; border-radius: 8px; padding: 9px; margin-top: 6px; outline: 0; background: #fafbfc; font-size: 12px; }
 form textarea { resize: vertical; }
