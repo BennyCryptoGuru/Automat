@@ -10,7 +10,7 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
-from .browser import BY_MAP, BrowserManager
+from .browser import LOCATOR_STRATEGIES, BrowserManager
 from .db import Database
 from .runner import WorkflowRunner
 from .secrets import SecretVault
@@ -135,7 +135,7 @@ def create_app(test_config=None):
 
     @app.get("/")
     def index():
-        return render_template("index.html", locator_strategies=list(BY_MAP), action_types=ACTION_TYPES)
+        return render_template("index.html", locator_strategies=LOCATOR_STRATEGIES, action_types=ACTION_TYPES)
 
     @app.get("/monitor")
     def monitor():
@@ -222,7 +222,7 @@ def create_app(test_config=None):
             "credentials": db.all(f"SELECT {credential_public_select()} FROM credentials ORDER BY id DESC"),
             "browser": browser.status(), "runner": runner.snapshot(),
             "settings": settings_payload(),
-            "locator_strategies": list(BY_MAP), "action_types": ACTION_TYPES,
+            "locator_strategies": LOCATOR_STRATEGIES, "action_types": ACTION_TYPES,
         })
 
     @app.get("/api/settings")
@@ -273,7 +273,7 @@ def create_app(test_config=None):
     @app.post("/api/elements")
     def create_element():
         p = payload()
-        if p.get("strategy") not in BY_MAP:
+        if p.get("strategy") not in LOCATOR_STRATEGIES:
             raise ValueError("Invalid locator strategy")
         if not p.get("name") or not p.get("locator"):
             raise ValueError("Name and locator are required")
@@ -350,7 +350,7 @@ def create_app(test_config=None):
             element_refs = {}
             created_refs = set()
             for item in elements:
-                if not item.get("ref") or item.get("strategy") not in BY_MAP or not str(item.get("locator", "")).strip():
+                if not item.get("ref") or item.get("strategy") not in LOCATOR_STRATEGIES or not str(item.get("locator", "")).strip():
                     raise ValueError("The backup contains an invalid object")
                 site_id = site_refs.get(item.get("site_ref"))
                 row = connection.execute(
@@ -382,7 +382,7 @@ def create_app(test_config=None):
     @app.put("/api/elements/<int:item_id>")
     def update_element(item_id):
         p = payload()
-        if p.get("strategy") not in BY_MAP:
+        if p.get("strategy") not in LOCATOR_STRATEGIES:
             raise ValueError("Invalid locator strategy")
         if not str(p.get("name", "")).strip() or not str(p.get("locator", "")).strip():
             raise ValueError("Name and locator are required")
@@ -577,7 +577,7 @@ def create_app(test_config=None):
             element_refs = {}
             created_refs = set()
             for item in elements:
-                if item.get("strategy") not in BY_MAP or not str(item.get("locator", "")).strip():
+                if item.get("strategy") not in LOCATOR_STRATEGIES or not str(item.get("locator", "")).strip():
                     raise ValueError("The backup contains an invalid object")
                 site_id = site_refs.get(item.get("site_ref"))
                 row = connection.execute(
@@ -738,7 +738,7 @@ def create_app(test_config=None):
             refs = {}
             created = {}
             for item in elements:
-                if item.get("strategy") not in BY_MAP or not item.get("ref") or not item.get("locator"):
+                if item.get("strategy") not in LOCATOR_STRATEGIES or not item.get("ref") or not item.get("locator"):
                     raise ValueError("The backup contains an invalid object")
                 row = connection.execute("SELECT id FROM elements WHERE site_id IS ? AND strategy=? AND locator=?", (site_id, item["strategy"], item["locator"])).fetchone()
                 if row:

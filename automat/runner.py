@@ -6,10 +6,7 @@ import traceback
 from selenium.common.exceptions import InvalidElementStateException, MoveTargetOutOfBoundsException, NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
-
-from .browser import BY_MAP
 
 
 KEYS = {name.lower(): value for name, value in vars(Keys).items() if name.isupper()}
@@ -213,7 +210,8 @@ class WorkflowRunner:
         driver = self.browser.require()
         driver.switch_to.default_content()
         for frame in item.get("frame_path", []):
-            driver.switch_to.frame(driver.find_element(BY_MAP[frame["strategy"]], frame["locator"]))
+            by, value = self.browser.locator_tuple(frame["strategy"], frame["locator"])
+            driver.switch_to.frame(driver.find_element(by, value))
         return self.browser.find(item["strategy"], item["locator"], item.get("alternatives"))
 
     def _element_by_id(self, element_id):
@@ -524,9 +522,7 @@ class WorkflowRunner:
         elif kind == "wait_for":
             timeout = float(p.get("timeout", 10)); condition = p.get("condition", "visible")
             item = self.db.one("SELECT * FROM elements WHERE id=?", (action["element_id"],))
-            locator = (BY_MAP[item["strategy"]], item["locator"])
-            expected = {"present": EC.presence_of_element_located, "visible": EC.visibility_of_element_located, "clickable": EC.element_to_be_clickable, "hidden": EC.invisibility_of_element_located}[condition]
-            WebDriverWait(driver, timeout).until(expected(locator))
+            WebDriverWait(driver, timeout).until(lambda _driver: self._wait_for_element(item, condition))
         elif kind == "navigate": self.browser.navigate(p.get("url", ""))
         elif kind == "back": driver.back()
         elif kind == "forward": driver.forward()
@@ -543,3 +539,18 @@ class WorkflowRunner:
         elif kind == "script": driver.execute_script(p.get("script", ""))
         elif kind == "cookie_set": driver.add_cookie({"name": p.get("name", ""), "value": p.get("value", "")})
         else: raise ValueError(f"Unknown action type: {kind}")
+
+    def _wait_for_element(self, item, condition):
+        try:
+            element = self.browser.find(item["strategy"], item["locator"], item.get("alternatives"))
+        except NoSuchElementException:
+            return condition == "hidden"
+        if condition == "present":
+            return element
+        if condition == "visible":
+            return element if element.is_displayed() else False
+        if condition == "clickable":
+            return element if element.is_displayed() and element.is_enabled() else False
+        if condition == "hidden":
+            return not element.is_displayed()
+        raise ValueError(f"Unknown wait condition: {condition}")

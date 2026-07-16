@@ -22,6 +22,10 @@ def test_index_and_bootstrap(client):
     assert data["ok"] is True
     assert "css selector" in data["data"]["locator_strategies"]
     assert "xpath" in data["data"]["locator_strategies"]
+    assert "select by value" in data["data"]["locator_strategies"]
+    assert "select by text" in data["data"]["locator_strategies"]
+    assert "div text" in data["data"]["locator_strategies"]
+    assert "div partial text" in data["data"]["locator_strategies"]
 
 
 def test_dialog_cancel_buttons_do_not_submit_forms(client):
@@ -337,6 +341,7 @@ def test_saved_element_has_edit_control(client):
     assert "elements.strategy.onchange" in javascript
     assert "Locator method" in html
     assert "Metoda lokátoru" in javascript
+    assert '<option value="select by value">select by value</option>' in html
 
 
 def test_site_element_workflow_and_actions(client):
@@ -642,3 +647,12 @@ def test_rejects_unknown_locator_and_action(client):
     workflow = client.post("/api/workflows", json={"name": "Test"}).get_json()["data"]
     with pytest.raises(ValueError):
         client.post(f"/api/workflows/{workflow['id']}/actions", json={"action_type": "teleport"})
+
+
+def test_custom_locator_methods_can_be_saved(client):
+    element = client.post("/api/elements", json={
+        "name": "Server option", "strategy": "select by value", "locator": "int82", "capture_preview": False,
+    }).get_json()["data"]
+
+    assert element["strategy"] == "select by value"
+    assert element["locator"] == "int82"

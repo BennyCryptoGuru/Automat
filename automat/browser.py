@@ -24,6 +24,9 @@ BY_MAP = {
     "partial link text": By.PARTIAL_LINK_TEXT,
 }
 
+CUSTOM_LOCATOR_STRATEGIES = ("select by value", "select by text", "div text", "div partial text")
+LOCATOR_STRATEGIES = [*BY_MAP, *CUSTOM_LOCATOR_STRATEGIES]
+
 
 PICKER_SCRIPT = r"""
 (() => {
@@ -74,10 +77,20 @@ PICKER_SCRIPT = r"""
       alternatives.push({strategy:'link text', locator:linkText});
       alternatives.push({strategy:'partial link text', locator:linkText.slice(0,80)});
     }
+    if(el.tagName==='OPTION') {
+      if(el.value) alternatives.push({strategy:'select by value', locator:el.value});
+      if(el.textContent.trim()) alternatives.push({strategy:'select by text', locator:el.textContent.trim()});
+    }
+    if(el.tagName==='DIV' && el.textContent.trim()) {
+      const divText=el.textContent.trim();
+      alternatives.push({strategy:'div text', locator:divText});
+      alternatives.push({strategy:'div partial text', locator:divText.slice(0,80)});
+    }
     window.__automatSelection={
       strategy: alternatives[0].strategy, locator: alternatives[0].locator, alternatives,
       tag:el.tagName.toLowerCase(), text:(el.innerText||el.value||'').trim().slice(0,160),
       linkText:link ? link.textContent.trim().slice(0,160) : '',
+      optionValue:el.tagName==='OPTION' ? el.value : '',
       title:el.getAttribute('title')||'', ariaLabel:el.getAttribute('aria-label')||'',
       rect:{x:Math.round(rect.x),y:Math.round(rect.y),width:Math.round(rect.width),height:Math.round(rect.height)}
     };
@@ -336,10 +349,35 @@ class BrowserManager:
             last_error = None
             for attempt in attempts:
                 try:
-                    return driver.find_element(BY_MAP[attempt["strategy"]], attempt["locator"])
+                    by, value = self.locator_tuple(attempt["strategy"], attempt["locator"])
+                    return driver.find_element(by, value)
                 except (KeyError, NoSuchElementException) as exc:
                     last_error = exc
             raise NoSuchElementException(f"Element not found: {strategy}={locator}") from last_error
+
+    @classmethod
+    def locator_tuple(cls, strategy, locator):
+        if strategy in BY_MAP:
+            return BY_MAP[strategy], locator
+        if strategy == "select by value":
+            return By.XPATH, f"//option[@value={cls.xpath_literal(locator)}]"
+        if strategy == "select by text":
+            return By.XPATH, f"//option[normalize-space(.)={cls.xpath_literal(locator)}]"
+        if strategy == "div text":
+            return By.XPATH, f"//div[normalize-space(.)={cls.xpath_literal(locator)}]"
+        if strategy == "div partial text":
+            return By.XPATH, f"//div[contains(normalize-space(.), {cls.xpath_literal(locator)})]"
+        raise KeyError(strategy)
+
+    @staticmethod
+    def xpath_literal(value):
+        text = str(value or "")
+        if '"' not in text:
+            return f'"{text}"'
+        if "'" not in text:
+            return f"'{text}'"
+        parts = text.split('"')
+        return "concat(" + ', \'"\', '.join(f'"{part}"' for part in parts) + ")"
 
     def quit(self):
         with self.lock:

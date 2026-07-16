@@ -3,6 +3,8 @@ import subprocess
 import pytest
 from selenium.common.exceptions import SessionNotCreatedException
 
+from selenium.webdriver.common.by import By
+
 from automat.browser import BrowserManager, PICKER_SCRIPT
 
 
@@ -65,6 +67,19 @@ def test_picker_collects_all_supported_locator_alternatives():
     assert "strategy:'partial link text'" in PICKER_SCRIPT
     assert "const link=el.closest('a')" in PICKER_SCRIPT
     assert "linkText:link ? link.textContent.trim().slice(0,160) : ''" in PICKER_SCRIPT
+    assert "strategy:'select by value'" in PICKER_SCRIPT
+    assert "strategy:'select by text'" in PICKER_SCRIPT
+    assert "strategy:'div text'" in PICKER_SCRIPT
+    assert "strategy:'div partial text'" in PICKER_SCRIPT
+    assert "optionValue:el.tagName==='OPTION' ? el.value : ''" in PICKER_SCRIPT
+
+
+def test_custom_locator_methods_build_xpath():
+    assert BrowserManager.locator_tuple("select by value", "int82") == (By.XPATH, '//option[@value="int82"]')
+    assert BrowserManager.locator_tuple("select by text", "Tzomel (int82)") == (By.XPATH, '//option[normalize-space(.)="Tzomel (int82)"]')
+    assert BrowserManager.locator_tuple("div text", "Exact") == (By.XPATH, '//div[normalize-space(.)="Exact"]')
+    assert BrowserManager.locator_tuple("div partial text", "zome") == (By.XPATH, '//div[contains(normalize-space(.), "zome")]')
+    assert BrowserManager.locator_tuple("div text", 'A "quoted" value')[1] == '//div[normalize-space(.)=\'A "quoted" value\']'
 
 
 def test_session_failure_never_creates_profile_directories(tmp_path, monkeypatch):
