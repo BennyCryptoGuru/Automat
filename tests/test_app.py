@@ -400,6 +400,8 @@ def test_picker_click_count_setting_is_available(client):
 
     assert 'id="pickerTools"' in html
     assert 'id="pickerClickCount"' in html
+    assert 'class="tools-menu object-backup-tools"' in html
+    assert 'class="panel-header-actions find-action-wrap"' in html
     assert 'title="Find object settings"' in html
     assert "Find on click" in html
     assert "Earlier clicks pass through the page" in html
@@ -412,6 +414,9 @@ def test_picker_click_count_setting_is_available(client):
     assert "P\\u0159edchoz\\u00ed kliky projdou do str\\u00e1nky" in javascript
     assert ".picker-tools-popover" in stylesheet
     assert ".picker-click-setting:hover .picker-help" in stylesheet
+    assert ".object-backup-tools" in stylesheet
+    assert ".find-action-wrap" in stylesheet
+    assert ".picker-tools { position: absolute" in stylesheet
 
 
 def test_picker_start_accepts_click_count(client, monkeypatch):
