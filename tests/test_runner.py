@@ -20,16 +20,18 @@ class LoopDatabase:
 
 
 class LoginBrowser(FakeBrowser):
-    def __init__(self):
+    def __init__(self, running=False):
         super().__init__()
+        self.running = running
         self.urls = []
 
     def navigate(self, url):
+        self.running = True
         self.urls.append(url)
         return self.status()
 
     def status(self):
-        return {"running": True, "browser": "Brave", "url": self.urls[-1] if self.urls else "", "title": "Login"}
+        return {"running": self.running, "browser": "Chrome", "url": self.urls[-1] if self.urls else "", "title": "Login"}
 
 
 class LoginDatabase:
@@ -317,6 +319,19 @@ def test_direct_login_opens_assigned_site_and_fills_profile():
     assert used_profiles == [9]
     assert result["credential_id"] == 9
     assert "password" not in result
+
+
+def test_direct_login_uses_current_browser_when_already_open():
+    browser = LoginBrowser(running=True)
+    runner = WorkflowRunner(browser, LoginDatabase(), None)
+    used_profiles = []
+    runner._auto_login = lambda credential_id: used_profiles.append(credential_id)
+
+    result = runner.login(9)
+
+    assert browser.urls == []
+    assert used_profiles == [9]
+    assert result["browser"]["running"] is True
 
 
 def test_login_field_can_be_found_inside_saved_wrapper():

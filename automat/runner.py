@@ -79,9 +79,10 @@ class WorkflowRunner:
         )
         if not profile:
             raise ValueError("Login profile does not exist")
-        if profile.get("site_url"):
+        browser_status = self.browser.status()
+        if not browser_status.get("running") and profile.get("site_url"):
             self.browser.navigate(profile["site_url"])
-        elif not self.browser.status()["running"]:
+        elif not browser_status.get("running"):
             raise ValueError("The profile has no assigned site. Open the target website first.")
         self._auto_login(credential_id)
         return {"credential_id": credential_id, "browser": self.browser.status()}
