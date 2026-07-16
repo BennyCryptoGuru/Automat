@@ -68,14 +68,16 @@ PICKER_SCRIPT = r"""
     alternatives.push({strategy:'tag name', locator:el.tagName.toLowerCase()});
     alternatives.push({strategy:'css selector', locator:cssPath(el)});
     alternatives.push({strategy:'xpath', locator:xpath(el)});
-    if(el.tagName==='A' && el.textContent.trim()) {
-      const linkText=el.textContent.trim();
+    const link=el.closest('a');
+    if(link && link.textContent.trim()) {
+      const linkText=link.textContent.trim();
       alternatives.push({strategy:'link text', locator:linkText});
       alternatives.push({strategy:'partial link text', locator:linkText.slice(0,80)});
     }
     window.__automatSelection={
       strategy: alternatives[0].strategy, locator: alternatives[0].locator, alternatives,
       tag:el.tagName.toLowerCase(), text:(el.innerText||el.value||'').trim().slice(0,160),
+      linkText:link ? link.textContent.trim().slice(0,160) : '',
       title:el.getAttribute('title')||'', ariaLabel:el.getAttribute('aria-label')||'',
       rect:{x:Math.round(rect.x),y:Math.round(rect.y),width:Math.round(rect.width),height:Math.round(rect.height)}
     };

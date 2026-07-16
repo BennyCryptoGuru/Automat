@@ -63,6 +63,8 @@ def test_picker_collects_all_supported_locator_alternatives():
     assert "strategy:'css selector'" in PICKER_SCRIPT
     assert "strategy:'xpath'" in PICKER_SCRIPT
     assert "strategy:'partial link text'" in PICKER_SCRIPT
+    assert "const link=el.closest('a')" in PICKER_SCRIPT
+    assert "linkText:link ? link.textContent.trim().slice(0,160) : ''" in PICKER_SCRIPT
 
 
 def test_session_failure_never_creates_profile_directories(tmp_path, monkeypatch):

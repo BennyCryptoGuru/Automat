@@ -327,11 +327,16 @@ def test_saved_items_have_individual_delete_controls(client):
 
 def test_saved_element_has_edit_control(client):
     javascript = client.get("/static/app.js").get_data(as_text=True)
+    html = client.get("/").get_data(as_text=True)
     assert "data-edit-element" in javascript
     assert "openEditElement" in javascript
     assert "syncElementLocatorFromStrategy" in javascript
+    assert "locatorFallbackForStrategy" in javascript
+    assert 'strategy==="partial link text"' in javascript
     assert "elementLocatorAlternatives" in javascript
     assert "elements.strategy.onchange" in javascript
+    assert "Locator method" in html
+    assert "Metoda lokátoru" in javascript
 
 
 def test_site_element_workflow_and_actions(client):
