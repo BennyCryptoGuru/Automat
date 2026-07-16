@@ -342,6 +342,18 @@ def test_saved_element_has_edit_control(client):
     assert "Locator method" in html
     assert "Metoda lokátoru" in javascript
     assert '<option value="select by value">select by value</option>' in html
+    assert '"select by value":"option podle hodnoty"' in javascript
+    assert '"select by text":"option podle textu"' in javascript
+    assert '"div partial text":"div část textu"' in javascript
+
+
+def test_dynamic_select_options_have_translatable_labels(client):
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+
+    assert "parameterOptionLabels" in javascript
+    assert "parameterOptionLabel(x)" in javascript
+    assert 'context_click:"Right click"' in javascript
+    assert '"clickable":"kliknutelný"' in javascript
 
 
 def test_site_element_workflow_and_actions(client):
