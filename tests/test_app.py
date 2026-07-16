@@ -211,7 +211,9 @@ def test_stealth_recovery_helper_is_available():
     assert "json.dumps(False)" in text
     assert "/api/browser/quit" in text
     assert 'Join-Path $Root "start.bat"' in text
-    assert "disable_stealth_run.bat" in (root / "scripts" / "update.ps1").read_text(encoding="utf-8")
+    update_script = (root / "scripts" / "update.ps1").read_text(encoding="utf-8")
+    assert "Get-ChildItem -LiteralPath $SourcePath -File -Force" in update_script
+    assert '".env"' in update_script
 
 
 def test_update_script_downloads_from_github_and_preserves_local_data():
@@ -231,6 +233,11 @@ def test_update_script_downloads_from_github_and_preserves_local_data():
     assert "data\\update.lock" in text
     assert "Set-UpdateLock" in text
     assert "Clear-UpdateLock" in text
+    assert "Get-ChildItem -LiteralPath $SourcePath -Directory -Force" in text
+    assert "Get-ChildItem -LiteralPath $SourcePath -File -Force" in text
+    assert '"data"' in text
+    assert '".venv"' in text
+    assert '"stealth_status.html"' not in text
     assert "update_in_progress" in watchdog
     assert "UPDATE_LOCK" in watchdog
 
@@ -305,8 +312,8 @@ def test_manual_watchdog_scripts_can_start_and_stop_only_watchdog():
     assert "watchdog\\.py" in stop_script
     assert "watchdog_hidden\\.ps1" in stop_script
     assert "Stop-Process" in stop_script
-    assert "start_watchdog.bat" in update_script
-    assert "stop_watchdog.bat" in update_script
+    assert "Get-ChildItem -LiteralPath $SourcePath -File -Force" in update_script
+    assert "Copy-Item" in update_script
 
 
 def test_runner_controls_are_enabled_only_for_valid_state(client):

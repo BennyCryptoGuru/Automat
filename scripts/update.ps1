@@ -134,38 +134,46 @@ function Download-GitHubSource([string]$TemporaryRoot) {
 
 function Copy-ProgramFiles([string]$SourcePath) {
     Write-Step "Copying program files"
-    $itemsToCopy = @(
-        "automat",
-        "tests",
-        "scripts",
-        "install.bat",
-        "disable_stealth_run.bat",
-        "update.bat",
-        "start_watchdog.bat",
-        "stop_watchdog.bat",
-        "stealth_status.html",
-        "requirements.txt",
-        "run.py",
-        "add_watchdog_to_startup.bat",
-        "remove_watchdog_from_startup.bat",
-        "start.bat",
-        "README.md",
-        "WATCHDOG_AUTORUN_GUIDE.txt",
-        "LICENSE",
-        ".gitattributes",
-        ".gitignore"
+    $excludedDirectories = @(
+        ".git",
+        ".venv",
+        ".pytest_cache",
+        "__pycache__",
+        "data",
+        "zalohy",
+        "production version",
+        "produkcni verze"
     )
-    foreach ($item in $itemsToCopy) {
-        $source = Join-Path $SourcePath $item
-        if (-not (Test-Path -LiteralPath $source)) { continue }
-        $target = Join-Path $TargetPath $item
-        if ((Get-Item -LiteralPath $source).PSIsContainer) {
-            & robocopy $source $target /MIR /XD "__pycache__" ".pytest_cache" /XF "*.pyc" "*.pyo" /NFL /NDL /NJH /NJS /NP | Out-Null
-            if ($LASTEXITCODE -gt 7) { throw "Copying folder $item failed (robocopy $LASTEXITCODE)." }
-        } else {
-            Copy-Item -LiteralPath $source -Destination $target -Force
+    $excludedFiles = @(
+        ".env",
+        ".env.*",
+        "*.log",
+        "*.pyc",
+        "*.pyo",
+        "*.pyd",
+        "*.rar",
+        "*.zip",
+        "*.7z",
+        "*.sqlite",
+        "*.sqlite3"
+    )
+
+    Get-ChildItem -LiteralPath $SourcePath -Directory -Force |
+        Where-Object { $excludedDirectories -notcontains $_.Name } |
+        ForEach-Object {
+            $target = Join-Path $TargetPath $_.Name
+            & robocopy $_.FullName $target /MIR /XD "__pycache__" ".pytest_cache" /XF $excludedFiles /NFL /NDL /NJH /NJS /NP | Out-Null
+            if ($LASTEXITCODE -gt 7) { throw "Copying folder $($_.Name) failed (robocopy $LASTEXITCODE)." }
         }
-    }
+
+    Get-ChildItem -LiteralPath $SourcePath -File -Force |
+        Where-Object {
+            $name = $_.Name
+            -not ($excludedFiles | Where-Object { $name -like $_ })
+        } |
+        ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $TargetPath $_.Name) -Force
+        }
 }
 
 function Backup-LocalData {
