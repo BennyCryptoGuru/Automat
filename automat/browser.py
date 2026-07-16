@@ -14,12 +14,12 @@ from selenium.webdriver.common.by import By
 
 
 BY_MAP = {
+    "css selector": By.CSS_SELECTOR,
+    "xpath": By.XPATH,
     "id": By.ID,
     "name": By.NAME,
     "class name": By.CLASS_NAME,
     "tag name": By.TAG_NAME,
-    "css selector": By.CSS_SELECTOR,
-    "xpath": By.XPATH,
     "link text": By.LINK_TEXT,
     "partial link text": By.PARTIAL_LINK_TEXT,
 }

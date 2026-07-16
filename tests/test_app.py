@@ -20,6 +20,7 @@ def test_index_and_bootstrap(client):
     assert "Automat" in response.get_data(as_text=True)
     data = client.get("/api/bootstrap").get_json()
     assert data["ok"] is True
+    assert data["data"]["locator_strategies"][:2] == ["css selector", "xpath"]
     assert "css selector" in data["data"]["locator_strategies"]
     assert "xpath" in data["data"]["locator_strategies"]
     assert "select by value" in data["data"]["locator_strategies"]
@@ -378,6 +379,9 @@ def test_saved_element_has_edit_control(client):
     assert "elements.strategy.onchange" in javascript
     assert "Locator method" in html
     assert "Metoda lokátoru" in javascript
+    assert '<option value="css selector">css selector - recommended</option>' in html
+    assert '<option value="xpath">xpath - recommended</option>' in html
+    assert '"css selector - recommended":"css selector - doporu\\u010deno"' in javascript
     assert '<option value="select by value">select by value</option>' in html
     assert '"select by value":"option podle hodnoty"' in javascript
     assert '"select by text":"option podle textu"' in javascript

@@ -12,6 +12,7 @@ const i18nTextSources=new WeakMap();
 let i18nApplying=false;
 Object.assign(translations.cs,{
 "Loading...":"Otev\u00edr\u00e1m...",
+"css selector - recommended":"css selector - doporu\u010deno","xpath - recommended":"xpath - doporu\u010deno",
 "select by value":"option podle hodnoty","select by text":"option podle textu","div text":"div přesný text","div partial text":"div část textu",
 "Index":"Index","Present":"Přítomen","Visible":"Viditelný","Clickable":"Kliknutelný","Hidden":"Skrytý",
 "text":"text","value":"hodnota","index":"index","present":"přítomen","visible":"viditelný","clickable":"kliknutelný","hidden":"skrytý",

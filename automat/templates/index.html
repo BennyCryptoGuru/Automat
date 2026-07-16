@@ -74,7 +74,7 @@
     <form method="dialog" id="elementForm"><div class="modal-head"><div><span class="eyebrow" id="elementDialogEyebrow">NEW ELEMENT</span><h2 id="elementDialogTitle">Save found object</h2></div><button type="button" data-close-dialog class="close" aria-label="Close">&#215;</button></div>
       <div id="selectionPreview" class="selection-preview"><div class="preview-placeholder">Preview appears after saving</div><div><strong id="selectionTag">element</strong><span id="selectionText"></span></div></div>
       <label>Object name<input name="name" required placeholder="For example, Login button"></label>
-      <div class="form-row"><label>Locator method<select name="strategy">{% for item in locator_strategies %}<option value="{{ item }}">{{ item }}</option>{% endfor %}</select></label><label>Site<select name="site_id" id="elementSite"><option value="">No site</option></select></label></div>
+      <div class="form-row"><label>Locator method<select name="strategy">{% for item in locator_strategies %}<option value="{{ item }}">{{ item }}{% if item in ["css selector", "xpath"] %} - recommended{% endif %}</option>{% endfor %}</select></label><label>Site<select name="site_id" id="elementSite"><option value="">No site</option></select></label></div>
       <label>Locator value<textarea name="locator" required rows="2"></textarea></label>
       <label>Subobject (optional)<select name="parent_id" id="parentElement"><option value="">No parent object</option></select></label>
       <div class="modal-actions"><button type="button" data-close-dialog class="secondary">Cancel</button><button type="submit" value="default" class="primary" id="elementSubmitButton">Save object</button></div>
