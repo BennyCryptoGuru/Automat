@@ -1,8 +1,9 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+set "ROOT=%~dp0.."
+cd /d "%ROOT%"
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\stop_watchdog.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ROOT%\scripts\stop_watchdog.ps1"
 if errorlevel 1 (
   echo.
   echo Watchdog stop failed.

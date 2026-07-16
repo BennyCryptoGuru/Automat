@@ -67,7 +67,7 @@ Automat does not pass a custom `--user-data-dir` to Chrome and does not use brow
 - Frontend language switcher: English is the default UI language and Czech is available as a separate option.
 - Lightweight stealth monitor at `http://127.0.0.1:5000/monitor`, built as a single self-contained HTML page with inline CSS/JS. It shows online/offline state, background mode, the last two log entries, and nearby workflow actions.
 - Optional watchdog scripts can restart Automat only when Autorun is enabled. See `WATCHDOG_AUTORUN_GUIDE.txt`.
-- `disable_stealth_run.bat` turns off Stealth run and restarts Automat with the visible UI.
+- `helpers\disable_stealth_run.bat` turns off Stealth run and restarts Automat with the visible UI.
 
 ## Security Notes
 

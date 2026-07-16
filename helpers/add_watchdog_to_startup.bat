@@ -1,8 +1,9 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+set "ROOT=%~dp0.."
+cd /d "%ROOT%"
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\add_watchdog_to_startup.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ROOT%\scripts\add_watchdog_to_startup.ps1"
 if errorlevel 1 (
   echo.
   echo Watchdog startup setup failed.

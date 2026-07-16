@@ -1,9 +1,10 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+set "ROOT=%~dp0.."
+cd /d "%ROOT%"
 
 echo Disabling Stealth run and restarting Automat...
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\disable_stealth_run.ps1" %*
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ROOT%\scripts\disable_stealth_run.ps1" %*
 if errorlevel 1 (
   echo.
   echo Could not disable Stealth run. Details are shown above.

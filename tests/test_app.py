@@ -227,7 +227,7 @@ def test_monitor_status_returns_logs_and_action_window(client):
 def test_stealth_recovery_helper_is_available():
     root = Path(__file__).resolve().parents[1]
     script = root / "scripts" / "disable_stealth_run.ps1"
-    batch = root / "disable_stealth_run.bat"
+    batch = root / "helpers" / "disable_stealth_run.bat"
 
     assert script.exists()
     assert batch.exists()
@@ -293,12 +293,14 @@ def test_start_scripts_default_visible_and_stealth_only_when_enabled():
     assert "subprocess.Popen([str(chrome), APP_URL]" in runner
 
 
-def test_manual_launchers_stay_in_root_and_helpers_live_in_scripts():
+def test_manual_launchers_stay_in_root_and_helpers_are_grouped():
     root = Path(__file__).resolve().parents[1]
     manual_launchers = {
         "install.bat",
         "start.bat",
         "update.bat",
+    }
+    helper_launchers = {
         "disable_stealth_run.bat",
         "add_watchdog_to_startup.bat",
         "remove_watchdog_from_startup.bat",
@@ -322,21 +324,29 @@ def test_manual_launchers_stay_in_root_and_helpers_live_in_scripts():
 
     for launcher in manual_launchers:
         assert (root / launcher).exists()
+    for launcher in helper_launchers:
+        assert not (root / launcher).exists()
+        assert (root / "helpers" / launcher).exists()
     for helper in helper_files:
         assert not (root / helper).exists()
         assert (root / "scripts" / helper).exists()
 
+    helper_dir = root / "helpers"
+    assert "%ROOT%\\scripts\\add_watchdog_to_startup.ps1" in (helper_dir / "add_watchdog_to_startup.bat").read_text(encoding="utf-8")
+    assert "%ROOT%\\scripts\\disable_stealth_run.ps1" in (helper_dir / "disable_stealth_run.bat").read_text(encoding="utf-8")
+    assert 'Automat Watchdog.lnk' in (helper_dir / "remove_watchdog_from_startup.bat").read_text(encoding="utf-8")
+
 
 def test_manual_watchdog_scripts_can_start_and_stop_only_watchdog():
     root = Path(__file__).resolve().parents[1]
-    start_batch = (root / "start_watchdog.bat").read_text(encoding="utf-8")
-    stop_batch = (root / "stop_watchdog.bat").read_text(encoding="utf-8")
+    start_batch = (root / "helpers" / "start_watchdog.bat").read_text(encoding="utf-8")
+    stop_batch = (root / "helpers" / "stop_watchdog.bat").read_text(encoding="utf-8")
     start_script = (root / "scripts" / "start_watchdog.ps1").read_text(encoding="utf-8")
     stop_script = (root / "scripts" / "stop_watchdog.ps1").read_text(encoding="utf-8")
     update_script = (root / "scripts" / "update.ps1").read_text(encoding="utf-8")
 
-    assert "scripts\\start_watchdog.ps1" in start_batch
-    assert "scripts\\stop_watchdog.ps1" in stop_batch
+    assert "%ROOT%\\scripts\\start_watchdog.ps1" in start_batch
+    assert "%ROOT%\\scripts\\stop_watchdog.ps1" in stop_batch
     assert "watchdog.py" in start_script
     assert "pythonw.exe" in start_script
     assert "Watchdog start requested" in start_script
