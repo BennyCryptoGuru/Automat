@@ -711,6 +711,15 @@ def test_custom_locator_methods_can_be_saved(client):
     assert element["locator"] == "int82"
 
 
+def test_wait_for_timeout_zero_is_labeled_as_infinite(client):
+    javascript = client.get("/static/app.js").get_data(as_text=True)
+
+    assert "Timeout seconds (0 = infinite)" in javascript
+    assert "Timeout sekund (0 = nekone\\u010dno)" in javascript
+    assert 'wait_for:[["condition","Condition","select:present|visible|clickable|hidden"],["timeout","Timeout seconds (0 = infinite)","number",10]]' in javascript
+    assert 'value===""?Number(initial??0):Number(value)' in javascript
+
+
 def test_element_update_preserves_locator_alternatives_and_metadata(client):
     element = client.post("/api/elements", json={
         "name": "Link", "strategy": "css selector", "locator": "a.docs", "capture_preview": False,

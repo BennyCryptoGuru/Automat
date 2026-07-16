@@ -520,9 +520,11 @@ class WorkflowRunner:
             key = KEYS.get(str(p.get("key", "ENTER")).lower(), p.get("key", ""))
             element.send_keys(key)
         elif kind == "wait_for":
-            timeout = float(p.get("timeout", 10)); condition = p.get("condition", "visible")
+            raw_timeout = p.get("timeout", 10)
+            timeout = 10 if raw_timeout in (None, "") else max(0, float(raw_timeout))
+            condition = p.get("condition", "visible")
             item = self.db.one("SELECT * FROM elements WHERE id=?", (action["element_id"],))
-            WebDriverWait(driver, timeout).until(lambda _driver: self._wait_for_element(item, condition))
+            self._wait_for_element_state(item, condition, timeout)
         elif kind == "navigate": self.browser.navigate(p.get("url", ""))
         elif kind == "back": driver.back()
         elif kind == "forward": driver.forward()
@@ -554,3 +556,17 @@ class WorkflowRunner:
         if condition == "hidden":
             return not element.is_displayed()
         raise ValueError(f"Unknown wait condition: {condition}")
+
+    def _wait_for_element_state(self, item, condition, timeout):
+        started = time.monotonic()
+        while not self.stop_event.is_set():
+            self.pause_event.wait()
+            if self.stop_event.is_set():
+                break
+            result = self._wait_for_element(item, condition)
+            if result:
+                return result
+            if timeout and time.monotonic() - started >= timeout:
+                raise TimeoutException(f"Element did not reach state '{condition}' within {timeout:g} seconds")
+            time.sleep(0.2)
+        raise InterruptedError

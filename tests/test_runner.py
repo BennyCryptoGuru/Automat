@@ -3,7 +3,7 @@ import time
 
 import automat.runner as runner_module
 from automat.runner import WorkflowRunner
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
 
 class FakeBrowser:
@@ -254,6 +254,35 @@ def test_countdown_descends_and_is_cleared(monkeypatch):
     assert all(left >= right for left, right in zip(numeric, numeric[1:]))
     assert updates[-1] == (None, None)
     assert runner.state["countdown"] is None
+
+
+def test_wait_for_element_state_zero_timeout_waits_until_condition(monkeypatch):
+    runner = make_runner()
+    attempts = iter([False, False, FakeElement(displayed=True)])
+    sleeps = []
+    times = iter([0, 1, 2])
+    monkeypatch.setattr(runner_module.time, "sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr(runner_module.time, "monotonic", lambda: next(times, 2))
+    runner._wait_for_element = lambda _item, _condition: next(attempts)
+
+    result = runner._wait_for_element_state({"id": 1}, "visible", 0)
+
+    assert result.is_displayed()
+    assert sleeps == [0.2, 0.2]
+
+
+def test_wait_for_element_state_positive_timeout_expires(monkeypatch):
+    runner = make_runner()
+    times = iter([0, 0.3, 0.6])
+    monkeypatch.setattr(runner_module.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(runner_module.time, "monotonic", lambda: next(times, 0.6))
+    runner._wait_for_element = lambda _item, _condition: False
+
+    try:
+        runner._wait_for_element_state({"id": 1}, "visible", 0.5)
+        raise AssertionError("TimeoutException was not raised")
+    except TimeoutException:
+        pass
 
 
 def test_pause_freezes_countdown():
