@@ -39,6 +39,35 @@ print("1" if row and bool(json.loads(row[0])) else "0")
     return ($result | Select-Object -Last 1) -eq "1"
 }
 
+function Get-ChromePath {
+    $candidates = @(
+        $env:AUTOMAT_CHROME_BINARY,
+        $env:AUTOMAT_BROWSER_BINARY,
+        "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+        "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+        "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+    )
+    foreach ($candidate in $candidates) {
+        if ($candidate -and (Test-Path -LiteralPath $candidate)) {
+            return $candidate
+        }
+    }
+    $command = Get-Command "chrome.exe" -ErrorAction SilentlyContinue
+    if ($command) {
+        return $command.Source
+    }
+    return $null
+}
+
+function Open-AppUi {
+    $chrome = Get-ChromePath
+    if ($chrome) {
+        Start-Process -FilePath $chrome -ArgumentList @($AppUrl)
+    } else {
+        Start-Process $AppUrl
+    }
+}
+
 function Start-WatchdogHidden {
     $watchdogLauncher = Join-Path $PSScriptRoot "watchdog_hidden.ps1"
     if (Test-Path -LiteralPath $watchdogLauncher) {
@@ -51,7 +80,7 @@ if (Test-ServerRunning) {
         Write-Host "Automat is already running in Stealth run mode."
     } else {
         Write-Host "Automat is already running. Opening the existing UI: $AppUrl"
-        Start-Process $AppUrl
+        Open-AppUi
     }
     exit 0
 }

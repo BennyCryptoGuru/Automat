@@ -281,9 +281,15 @@ def test_start_scripts_default_visible_and_stealth_only_when_enabled():
     assert "Stealth run is enabled. Starting Automat in the background." in start_helper
     assert ".venv\\Scripts\\python.exe" in start_helper
     assert "scripts\\start_hidden.vbs" in start_helper
+    assert "function Open-AppUi" in start_helper
+    assert "Get-ChromePath" in start_helper
+    assert "Google\\Chrome\\Application\\chrome.exe" in start_helper
     assert "pythonw.exe" in hidden_helper
     assert 'Join-Path $Root "run.py"' in start_helper
     assert 'CreateMutexW(None, True, "Local\\\\AutomatBrowserStudio")' in runner
+    assert "def open_app_ui" in runner
+    assert "chrome_candidates" in runner
+    assert "subprocess.Popen([str(chrome), APP_URL]" in runner
 
 
 def test_manual_launchers_stay_in_root_and_helpers_live_in_scripts():
